@@ -81,4 +81,25 @@ export class UserService {
 
         return user;
     }
+
+    //GET-EMAIL
+    static async getEmail(email:string) {
+        const user = await User.findOne({email:email.toLowerCase().trim()});
+        if(!user)
+            throw new AppError("Email not found", 404);
+
+        return user;
+    }
+
+
+    //GET-BY-ID
+    static async getUserId(id:string) {
+        const user = await User.findById(id);
+
+        if(!user)
+            throw new AppError("User not found", 404);
+
+        return user;
+    }
+
 }
