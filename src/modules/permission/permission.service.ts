@@ -1,6 +1,7 @@
 import { validateHeaderName } from "http";
 import { AppError } from "../../shared/error/appError";
 import { IPermission, Permission,  } from "./permission.model";
+import { Types } from "mongoose";
 
 class PermissionPayload {
     public readonly name: string;
@@ -96,5 +97,18 @@ export class PermissionService{
         return permission;
     }
 
+    
+    //VALIDATE PERMISSIONS
+    static async validatePermissionsIds(ids: string[]) {
+    if (!Array.isArray(ids) || ids.length === 0)
+        throw new AppError("Permissions are required", 400);
+
+    const permissions = await Permission.find({_id: { $in: ids }});
+
+    if (permissions.length !== ids.length)
+        throw new AppError("One or more permissions do not exist", 404);
+
+    return permissions;
+}
 
 }
