@@ -13,4 +13,8 @@ function getEnv(key: string): string {
 export const ENV = {
   PORT: Number(process.env.PORT) || 5000,
   MONGO_URI: getEnv('MONGO_URI'),
+  JWT_SECRET: getEnv('JWT_SECRET_KEY'),
+  JWT_REFRESH: getEnv('JWT_REFRESH_KEY'),
+  JWT_SECRET_TIMEOUT: getEnv('JWT_SECRET_TIMEOUT'),
+  JWT_REFRESH_TIMEOUT: getEnv('JWT_REFRESH_TIMEOUT'),
 };

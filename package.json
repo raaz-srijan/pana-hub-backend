@@ -10,9 +10,11 @@
   },
   "dependencies": {
     "@types/dotenv": "^6.1.1",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/mongoose": "^5.11.96",
     "dotenv": "^17.4.2",
     "express": "^4.22.2",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.6.3"
   },
   "devDependencies": {
