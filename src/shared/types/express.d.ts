@@ -3,6 +3,6 @@ import { PayloadTypes } from "../generateToken";
 
 declare module "express" {
     export interface Request {
-        user:PayloadTypes
+        user?:PayloadTypes
     }
 }
