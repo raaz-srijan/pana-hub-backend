@@ -25,12 +25,12 @@ export function generateRefreshToken(payload: PayloadTypes, expiresIn = JWT_REFR
 
 
 //VERIFY ACCESS TOKEN
-export function verifyAccessToken(accessToken:string) {
-    return jwt.verify(accessToken, JWT_SECRET);
+export function verifyAccessToken(accessToken:string):PayloadTypes {
+    return jwt.verify(accessToken, JWT_SECRET) as PayloadTypes;
 }
 
 
 //VERIFY REFRESH TOKEN
-export function verifyRefreshToken(refreshToken:string) {
-    return jwt.verify(refreshToken, JWT_REFRESH);
+export function verifyRefreshToken(refreshToken:string):PayloadTypes {
+    return jwt.verify(refreshToken, JWT_REFRESH) as PayloadTypes;
 }
