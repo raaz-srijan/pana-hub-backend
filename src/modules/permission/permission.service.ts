@@ -1,5 +1,5 @@
 import { validateHeaderName } from "http";
-import { AppError } from "../../shared/appError";
+import { AppError } from "../../shared/error/appError";
 import { IPermission, Permission,  } from "./permission.model";
 
 class PermissionPayload {
@@ -28,6 +28,7 @@ export class PermissionService{
 
         return await Permission.create({name:validated.name, group:validated.group});
     }
+
 
     //UPDATE
     static async updatePerm(id:string, data:IPermission) {
@@ -65,7 +66,7 @@ export class PermissionService{
 
 
     //FETCH-ALL
-    static async fetchAllPermisisons(){
+    static async fetchAllPerm(){
         const permissions = await Permission.find();
 
         if(!permissions || permissions.length < 0)
@@ -73,4 +74,27 @@ export class PermissionService{
 
         return permissions;
     }
+
+
+    // FETCH-BY-ID
+    static async fetchPermById(id:string) {
+        const permission = await Permission.findById(id);
+
+        if(!permission)
+            throw new AppError("Permission not found", 404);
+
+
+    }
+
+
+    //FETCH-BY_NAME
+    static async fetchByName(name:string) {
+        const permission = await Permission.findOne({name:name.toLowerCase().trim()});
+        if(!permission)
+            throw new AppError("No permission found", 404);
+
+        return permission;
+    }
+
+
 }
