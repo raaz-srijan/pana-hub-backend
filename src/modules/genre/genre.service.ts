@@ -1,0 +1,122 @@
+import { AppError } from "../../shared/error/appError";
+import { Genre, IGenre } from "./genre.model";
+
+class GenrePayload {
+    public readonly name: string;
+    public readonly desc?: string;
+
+    constructor(data: Partial<IGenre>) {
+        if (!data || !data.name) {
+            throw new AppError("Please fill all the required fields", 400);
+        }
+        this.name = data.name.trim().toLowerCase();
+        this.desc = data.desc?.trim();
+    }
+}
+
+export class GenreService {
+    // REQUEST GENRE
+    static async requestGenre(data: IGenre) {
+        const input = new GenrePayload(data);
+
+        const existGenre = await Genre.findOne({ name: input.name });
+        if (existGenre) {
+            throw new AppError("Genre with same name already exists", 409);
+        }
+
+        const newGenre = await Genre.create({
+            name: input.name,
+            desc: input.desc,
+            isApproved: false
+        });
+
+        return { success: true, message: "Genre request sent", newGenre };
+    }
+
+    // UPDATE GENRE
+    static async updateGenre(id: string, data: Partial<IGenre>) {
+        const input = new GenrePayload(data);
+
+        const findGenre = await Genre.findById(id);
+        if (!findGenre) {
+            throw new AppError("Genre not found", 404);
+        }
+
+        const check = await Genre.findOne({ name: input.name, _id: { $ne: id } });
+        if (check) {
+            throw new AppError("Genre with same name already exists", 409);
+        }
+
+        const updateData: Partial<IGenre> = {
+            name: input.name,
+            desc: input.desc,
+            isApproved: false // Reset approval status on modification
+        };
+
+        const update = await Genre.findByIdAndUpdate(
+            id,
+            { $set: updateData },
+            { new: true, runValidators: true }
+        );
+
+        return { success: true, message: "Genre updated successfully", update };
+    }
+
+    // DELETE GENRE
+    static async deleteGenre(id: string) {
+        const genre = await Genre.findByIdAndDelete(id);
+        if (!genre) {
+            throw new AppError("Genre not found", 404);
+        }
+        return { success: true, message: "Genre deleted successfully" };
+    }
+
+    // FETCH REQUESTED GENRES
+    static async fetchRequestGenre(page: number = 1, limit: number = 10) {
+        const genres = await Genre.find({ isApproved: false })
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        return {
+            success: true,
+            message: genres.length ? "Genres fetched successfully" : "No genres found",
+            genres
+        };
+    }
+
+    // TOGGLE APPROVE
+    static async toggleApprove(id: string) {
+        const genre = await Genre.findById(id);
+        if (!genre) {
+            throw new AppError("Genre not found", 404);
+        }
+
+        genre.isApproved = !genre.isApproved;
+        await genre.save();
+
+        const message = genre.isApproved ? "Genre approved" : "Genre disapproval successful";
+        return { success: true, message, genre };
+    }
+
+    // FETCH APPROVED GENRES
+    static async fetchAllGenre(page: number = 1, limit: number = 10) {
+        const genres = await Genre.find({ isApproved: true })
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        return {
+            success: true,
+            message: genres.length ? "Genres fetched successfully" : "No genres found",
+            genres
+        };
+    }
+
+    // GET GENRE BY NAME
+    static async getGenreName(name: string) {
+        const genre = await Genre.findOne({ name: name.trim().toLowerCase() });
+        if (!genre) {
+            throw new AppError("Genre not found", 404);
+        }
+        return { success: true, genre };
+    }
+}
