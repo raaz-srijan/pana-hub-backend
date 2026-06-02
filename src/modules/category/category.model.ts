@@ -24,8 +24,8 @@ const categorySchema:Schema<ICategory> = new Schema({
     },
 
     isApproved:{
-        type:Boolean;
-        default:false;
+        type:Boolean,
+        default:false,
     }
 }, {timestamps:true});
 
