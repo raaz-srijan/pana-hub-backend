@@ -158,7 +158,13 @@ export class BookService {
     // FILTER FOR FETCH
     private static async bookFilter(filter: any = {}) {
         const safeFilter = { ...filter, deletedAt: null };
-        const books = await Book.find(safeFilter);
+
+        const books = await Book.find(safeFilter).populate([
+            { path: "category", select: "name" },
+            { path: "genre", select: "name" },
+            { path: "author", select: "name" }
+        ]);
+
         return { success: true, message: books.length ? "Books fetched successfully" : "No books available", books };
     }
 
@@ -183,10 +189,15 @@ export class BookService {
 
     // FETCH BY ID
     static async fetchById(id: string) {
-        const book = await Book.findOne({ _id: id, deletedAt: null });
+        const book = await Book.findOne({ _id: id, deletedAt: null }).populate([
+            { path: "category", select: "name" },
+            { path: "genre", select: "name" },
+            { path: "author", select: "name" }
+        ]);
 
-        if (!book)
+        if (!book) {
             throw new AppError("Book not found", 404);
+        }
 
         return { success: true, message: "Book fetched successfully", book };
     }
@@ -221,19 +232,27 @@ export class BookService {
             throw new AppError("At least one search parameter must be provided", 400);
         }
 
-        const book = await Book.findOne(query);
+        const book = await Book.findOne(query).populate([
+            { path: "category", select: "name" },
+            { path: "genre", select: "name" },
+            { path: "author", select: "name" }
+        ]);
 
         if (!book) {
             throw new AppError("Book not found", 404);
         }
 
-        return { success: true, message: "Book fetched successfully", book };
+        return book;
     }
 
 
     // FETCH SOFT DELETES 
     static async fetchSoftDelete() {
-        const books = await Book.find({ deletedAt: { $ne: null } });
+        const books = await Book.find({ deletedAt: { $ne: null } }).populate([
+            { path: "category", select: "name" },
+            { path: "genre", select: "name" },
+            { path: "author", select: "name" }
+        ]);
 
         return { success: true, message: books.length ? "Trashed books fetched successfully" : "Trash is empty", books };
     }

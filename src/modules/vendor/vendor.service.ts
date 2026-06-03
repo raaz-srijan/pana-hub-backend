@@ -119,7 +119,7 @@ export class VendorService {
         const vendor = await Vendor.findById(id).populate("userId", "name email");
         if (!vendor) throw new AppError("Vendor not found", 404);
 
-        return { success: true, message: "Vendor fetched successfully", vendor };
+        return vendor;
     }
 
 
