@@ -134,8 +134,11 @@ export class AuthorService {
     };
 
 
-    //FETCH AUHTOR NAME
+    //FETCH AUTHOR NAME
     static async getAuthorName(name:string) {
-        return await this.genericFetch({name:name});
+        const author = await Author.findOne({name:name.trim().toLowerCase()});
+        if(!author)
+            throw new AppError("Author not found", 404);
+        return author;
     }
 }
