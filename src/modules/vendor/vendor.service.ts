@@ -160,4 +160,14 @@ export class VendorService {
 
         return { success: true, message: "Vendor profile deleted successfully" };
     }
+
+
+    //VENDOR BY USER ID
+    static async findByUserId(userId: string) {
+    const vendor = await Vendor.findOne({ userId });
+    if (!vendor) {
+        throw new AppError("Access denied. No vendor profile found for this account.", 403);
+    }
+    return vendor;
+}
 }
