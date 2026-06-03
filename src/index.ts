@@ -12,6 +12,7 @@ import appRouter from "./infrastructure/appRouter";
 
 // Error Handler
 import globalError from "./shared/error/globalError";
+import { cloudinaryConfig } from "./infrastructure/cloudinaryConfig";
 
 const app = express();
 const PORT = ENV.PORT;
@@ -33,4 +34,5 @@ app.use(globalError);
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     connectDb();
+    cloudinaryConfig();
 });
