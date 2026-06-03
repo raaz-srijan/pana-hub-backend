@@ -1,3 +1,4 @@
+import { Types } from "mongoose";
 import { AppError } from "../../shared/error/appError";
 import { Genre, IGenre } from "./genre.model";
 
@@ -117,6 +118,22 @@ export class GenreService {
         if (!genre) {
             throw new AppError("Genre not found", 404);
         }
-        return { success: true, genre };
+        return genre;
+    }
+
+    //VALIDATE GENRE
+    static async validateGenre(ids: Types.ObjectId[]) {
+        if (!ids || ids.length === 0) {
+            throw new AppError("At least one genre is required", 400);
+        }
+
+        const existingGenre = await Genre.find({ _id: { $in: ids } });
+
+        if (existingGenre.length !== ids.length) {
+            throw new AppError("One or more provided genres are invalid", 400);
+        }
+
+        return existingGenre.map(genre => genre._id as Types.ObjectId);
+
     }
 }
