@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cookieParser from "cookie-parser";
+import cors from "cors";
 
 // Infrastructure
 import { connectDb } from "./infrastructure/connectDb";
@@ -15,6 +16,14 @@ import globalError from "./shared/error/globalError";
 import { cloudinaryConfig } from "./infrastructure/cloudinaryConfig";
 
 const app = express();
+
+app.use(cors({
+    origin: ENV.FRONTEND_URL,
+    credentials:true,
+    methods: ["POST", "PUT", "PATCH", "GET", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
 const PORT = ENV.PORT;
 
 
