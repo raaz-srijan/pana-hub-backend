@@ -38,12 +38,12 @@ export class UserService {
 
         const newUser = await User.create({ name: validated.name, email: validated.email, password: hashedPassword, roleId: defaultRole._id });
 
-        const accessToken = await generateAccessToken({ id: newUser._id.toString(), email: newUser.email });
+        const accessToken = generateAccessToken({ id: newUser._id.toString(), email: newUser.email });
 
         const user = newUser.toObject();
         const { password, ...safeUser } = user;
 
-        return { safeUser, accessToken };
+        return {success:true, message:"User registered successfully", user, accessToken};
     }
 
 
@@ -83,9 +83,9 @@ export class UserService {
     }
 
     //GET-EMAIL
-    static async getEmail(email:string) {
-        const user = await User.findOne({email:email.toLowerCase().trim()});
-        if(!user)
+    static async getEmail(email: string) {
+        const user = await User.findOne({ email: email.toLowerCase().trim() }).select("+password").populate("roleId", "name");
+        if (!user)
             throw new AppError("Email not found", 404);
 
         return user;
@@ -93,10 +93,10 @@ export class UserService {
 
 
     //GET-BY-ID
-    static async getUserId(id:string) {
+    static async getUserId(id: string) {
         const user = await User.findById(id);
 
-        if(!user)
+        if (!user)
             throw new AppError("User not found", 404);
 
         return user;
