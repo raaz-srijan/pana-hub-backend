@@ -10,7 +10,7 @@ export class UserController {
     static register = catchAsync(async (req: Request, res: Response) => {
         const user = await UserService.createUser(req.body);
 
-        return res.status(201).json({ success: true, message: "User registered successfully", data: user });
+        return res.status(201).json(user);
     });
 
 
