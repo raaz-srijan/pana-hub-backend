@@ -1,5 +1,5 @@
 import { AppError } from "../../shared/error/appError";
-import { generateRefreshToken, verifyAccessToken, verifyRefreshToken } from "../../shared/generateToken";
+import { generateAccessToken, generateRefreshToken, verifyAccessToken, verifyRefreshToken } from "../../shared/generateToken";
 import { UserService } from "../user/user.service";
 import bcrypt from "bcrypt";
 
@@ -13,17 +13,23 @@ export class AuthService {
         if (!email || !password)
             throw new AppError("Please fill all the required fields", 400);
 
-        const checkUser = await UserService.getEmail(email);
+        const user = await UserService.getEmail(email);
 
-        if (!checkUser)
+        if (!user)
             throw new AppError("Incorrect email or password", 400);
 
-        const isMatch = await bcrypt.compare(password, checkUser.password);
+        const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch)
             throw new AppError("Incorrect email or password", 400);
 
-        return checkUser;
+        const accessToken = generateAccessToken({id:user._id.toString(), email:user.email});
+        const refreshToken = generateRefreshToken({id:user._id.toString(), email:user.email});
+
+        const userRole = user as any;
+        
+        const payload = {id:user._id, name:user.name, email:user.email, isVerified:user.isVerified, role:userRole.roleId.name, accessToken}
+        return {payload, refreshToken};
     }
 
 
