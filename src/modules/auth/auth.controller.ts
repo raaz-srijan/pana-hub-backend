@@ -31,6 +31,23 @@ export class AuthController {
     });
 
 
+    //LOGOUT
+    static logout = catchAsync(async (req: Request, res: Response) => {
+        const token = req.cookies.refreshToken;
+
+        res.clearCookie("refreshToken", {
+            httpOnly: true,
+            secure: false,
+            sameSite: "lax",
+            path: "/"
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Logged out successfully. Secure sessions terminated."
+        });
+    });
+
     //VERIFY-EMAIL
     static verifyEmail = catchAsync(async (req: Request, res: Response) => {
         const { accessToken } = req.params;

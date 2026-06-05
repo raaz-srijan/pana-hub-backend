@@ -1,19 +1,23 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import { AppError } from "../../shared/error/appError";
-
+import { AuthenticatedRequest } from "./auth";
 
 export const restrictTo = (...roles: string[]) => {
-    return (req: Request, res: Response, next: NextFunction) => {
+    return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
         if (!req.user) {
             return next(new AppError("You are not logged in. Please log in to get access.", 401));
         }
 
-        if(!req.user.role)
-            return next(new AppError("Invalid role", 401));
+        if (!req.user.role) {
+            return next(new AppError("Invalid or missing user role architecture.", 401));
+        }
+
+        const lowerCaseRoles = roles.map(role => role.toLowerCase());
+        const userRole = req.user.role.toLowerCase();
             
-        if (!roles.includes(req.user.role)) {
+        if (!lowerCaseRoles.includes(userRole)) {
             return next(
-                new AppError("You do not have permission to perform this action", 403)
+                new AppError(`Forbidden. Required role: [${roles}]. Your role: [${req.user.role}]`, 403)
             );
         }
 

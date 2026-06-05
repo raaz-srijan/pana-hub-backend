@@ -1,10 +1,18 @@
 import { ErrorRequestHandler } from "express";
+import { AppError } from "./appError";
 
 const globalError: ErrorRequestHandler = (err, req, res, next) => {
-  res.status(500).json({
+  let statusCode = err.statusCode || 500;
+  let message = err.message || "Internal Server Error";
+
+  if (!(err instanceof AppError) && statusCode === 500) {
+    message = "Something went terribly wrong on our servers.";
+  }
+
+  return res.status(statusCode).json({
     success: false,
-    message: "Internal Server Error",
-    error:err.message
+    message: message,
+    error: err.message
   });
 };
 

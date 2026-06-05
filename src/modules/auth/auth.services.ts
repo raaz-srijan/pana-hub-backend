@@ -7,45 +7,73 @@ export class AuthService {
 
     //CREDENTIALS
     static async loginUser(data: any) {
-
         const { email, password } = data;
 
-        if (!email || !password)
+        if (!email || !password) {
             throw new AppError("Please fill all the required fields", 400);
+        }
 
         const user = await UserService.getEmail(email);
-
-        if (!user)
+        if (!user) {
             throw new AppError("Incorrect email or password", 400);
+        }
 
         const isMatch = await bcrypt.compare(password, user.password);
-
-        if (!isMatch)
+        if (!isMatch) {
             throw new AppError("Incorrect email or password", 400);
+        }
 
-        const accessToken = generateAccessToken({id:user._id.toString(), email:user.email});
-        const refreshToken = generateRefreshToken({id:user._id.toString(), email:user.email});
+        const userObj = user as any;
 
-        const userRole = user as any;
-        
-        const payload = {id:user._id, name:user.name, email:user.email, isVerified:user.isVerified, role:userRole.roleId.name, accessToken}
-        return {payload, refreshToken};
+        const roleName = userObj.roleId?.name || "customer";
+
+        if (!userObj.roleId?.name) {
+            console.warn(`Warning: User ${user.email} logged in without a populated roleId. Falling back to 'customer'.`);
+        }
+
+        const tokenPayload = {
+            id: user._id.toString(),
+            email: user.email,
+            role: roleName
+        };
+
+        const accessToken = generateAccessToken(tokenPayload);
+        const refreshToken = generateRefreshToken(tokenPayload);
+
+        const payload = {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            isVerified: user.isVerified,
+            role: roleName,
+            accessToken
+        };
+
+        return { payload, refreshToken };
     }
 
-
+    
     //REFRESH
     static async refresh(token: string) {
-
-        const decoded = await verifyRefreshToken(token);
+        const decoded = verifyRefreshToken(token);
 
         const user = await UserService.getUserId(decoded.id);
-
-        if (!user)
+        if (!user) {
             throw new AppError("User not found", 404);
+        }
 
-        const newRefreshToken = generateRefreshToken({ id: user._id.toString(), role: user.roleId?.toString() });
+        const roleName = (user.roleId as any)?.name;
 
-        return newRefreshToken;
+        const newAccessToken = generateAccessToken({
+            id: user._id.toString(),
+            role: roleName,
+            email: user.email
+        });
+
+        const newRefreshToken = generateRefreshToken({
+            id: user._id.toString(),
+            role: roleName
+        });
     }
 
 
