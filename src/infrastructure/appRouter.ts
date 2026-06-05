@@ -15,7 +15,7 @@ import wishlistRouter from "../modules/wishlist/wishlist.route.js";
 
 const appRouter = Router();
 
-appRouter.use("/user", userRoute);
+appRouter.use("/users", userRoute);         
 appRouter.use("/auth", authRoute);
 appRouter.use("/vendors", vendorRoute);
 appRouter.use("/permissions", permissionRoute);
