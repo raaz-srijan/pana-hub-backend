@@ -5,7 +5,7 @@ import { deleteImage, uploadImage } from "../../infrastructure/imageHandler";
 import { CategoryService } from "../category/category.service";
 import { GenreService } from "../genre/genre.service";
 import { AuthorService } from "../author/author.service";
-
+import { paginateAggregation } from "../../shared/helper/pagination"; 
 
 class BookPayload {
     public readonly name: string;
@@ -28,23 +28,18 @@ class BookPayload {
         this.publisher = data.publisher;
         this.publishedDate = data.publishedDate;
     }
-};
-
+}
 
 export class BookService {
 
     // ADD BOOK
     static async requestBook(data: IBook, file: any) {
         const input = new BookPayload(data);
-
-        //Only look for active books with this ISBN
         const existBook = await Book.findOne({ isbn: input.isbn, deletedAt: null });
 
-        if (existBook)
-            throw new AppError("Book is already registered", 409);
+        if (existBook) throw new AppError("Book is already registered", 409);
 
         let imageData: any = { imageUrl: "", publicId: "" };
-
         if (file) {
             const upload = await uploadImage(file.path);
             imageData = { imageUrl: upload.secure_url, publicId: upload.public_id };
@@ -69,24 +64,18 @@ export class BookService {
         return { success: true, message: "Book added successfully", newBook };
     }
 
-
     // UPDATE BOOK
     static async updateBook(id: string, data: Partial<IBook>, file: any) {
         const existBook = await Book.findOne({ _id: id, deletedAt: null });
-
-        if (!existBook)
-            throw new AppError("Book not found", 404);
+        if (!existBook) throw new AppError("Book not found", 404);
 
         const updateData: any = { isVerified: false };
-
         if (data.name) updateData.name = data.name.trim().toLowerCase();
 
         if (data.isbn) {
             const formattedIsbn = data.isbn.trim().toLowerCase();
             const duplicate = await Book.findOne({ isbn: formattedIsbn, _id: { $ne: id }, deletedAt: null });
-            if (duplicate)
-                throw new AppError("Book with same isbn already exists", 409);
-
+            if (duplicate) throw new AppError("Book with same isbn already exists", 409);
             updateData.isbn = formattedIsbn;
         }
 
@@ -94,98 +83,81 @@ export class BookService {
             await AuthorService.getAuthorName(data.author.toString());
             updateData.author = data.author;
         }
-
         if (data.category) {
             await CategoryService.getCatName(data.category.toString());
             updateData.category = data.category;
         }
-
         if (data.genre) {
             const genre = await GenreService.validateGenre(data.genre);
             updateData.genre = genre;
         }
-
         if (file) {
-            if (existBook.coverImage?.publicId) {
-                await deleteImage(existBook.coverImage.publicId);
-            }
-
+            if (existBook.coverImage?.publicId) await deleteImage(existBook.coverImage.publicId);
             const upload = await uploadImage(file.path);
             updateData.coverImage = { imageUrl: upload.secure_url, publicId: upload.public_id };
         }
 
         if (data.publisher) updateData.publisher = data.publisher;
-
         if (data.publishedDate !== undefined) updateData.publishedDate = data.publishedDate;
 
         const update = await Book.findByIdAndUpdate(id, { $set: updateData }, { new: true, runValidators: true });
-
         return { success: true, message: `${update?.name || "Book"} updated successfully`, update };
     }
-
 
     // SOFT DELETE BOOK
     static async deleteBook(id: string) {
         const book = await Book.findOne({ _id: id, deletedAt: null });
-
-        if (!book)
-            throw new AppError("Book not found or already in trash", 404);
+        if (!book) throw new AppError("Book not found or already in trash", 404);
 
         book.deletedAt = new Date();
         await book.save();
-
         return { success: true, message: "Book moved to trash successfully" };
     }
 
-
-    // PERMANENT DELETE BOOK (Erase completely)
+    // PERMANENT DELETE BOOK
     static async permanentlyDeleteBook(id: string) {
-        // Find it regardless of soft-delete status
         const book = await Book.findById(id);
+        if (!book) throw new AppError("Book not found in system", 404);
 
-        if (!book)
-            throw new AppError("Book not found in system", 404);
-
-        if (book.coverImage?.publicId) {
-            await deleteImage(book.coverImage.publicId);
-        }
-
+        if (book.coverImage?.publicId) await deleteImage(book.coverImage.publicId);
         await Book.findByIdAndDelete(id);
         return { success: true, message: "Book permanently erased from database" };
     }
 
-
-    // FILTER FOR FETCH
-    private static async bookFilter(filter: any = {}) {
+    // Standard queries use the generic helper correctly mapped to options object
+    private static async bookFilter(filter: any = {}, page: number = 1, limit: number = 10) {
         const safeFilter = { ...filter, deletedAt: null };
+        
+        const result = await paginateAggregation<IBook>(Book, safeFilter, {
+            page,
+            limit,
+            sort: { createdAt: -1 },
+            populate: [
+                { path: "category", select: "name" },
+                { path: "genre", select: "name" },
+                { path: "author", select: "name" }
+            ]
+        });
 
-        const books = await Book.find(safeFilter).populate([
-            { path: "category", select: "name" },
-            { path: "genre", select: "name" },
-            { path: "author", select: "name" }
-        ]);
-
-        return { success: true, message: books.length ? "Books fetched successfully" : "No books available", books };
+        return {
+            success: true,
+            message: result.data.length ? "Books fetched successfully" : "No books available",
+            meta: result.meta,
+            books: result.data
+        };
     }
 
-
-    // FETCH VERIFIED BOOKS
-    static async fetchVerifiedBooks() {
-        return await this.bookFilter({ isVerified: true });
+    static async fetchVerifiedBooks(page?: number, limit?: number) {
+        return await this.bookFilter({ isVerified: true }, page, limit);
     }
 
-
-    // FETCH UNVERIFIED BOOKS
-    static async fetchUnVerifiedBooks() {
-        return await this.bookFilter({ isVerified: false });
+    static async fetchUnVerifiedBooks(page?: number, limit?: number) {
+        return await this.bookFilter({ isVerified: false }, page, limit);
     }
 
-
-    // FETCH ALL BOOKS
-    static async fetchAllBooks() {
-        return await this.bookFilter();
+    static async fetchAllBooks(page?: number, limit?: number) {
+        return await this.bookFilter({}, page, limit);
     }
-
 
     // FETCH BY ID
     static async fetchById(id: string) {
@@ -194,14 +166,9 @@ export class BookService {
             { path: "genre", select: "name" },
             { path: "author", select: "name" }
         ]);
-
-        if (!book) {
-            throw new AppError("Book not found", 404);
-        }
-
+        if (!book) throw new AppError("Book not found", 404);
         return { success: true, message: "Book fetched successfully", book };
     }
-
 
     // TOGGLE VERIFICATION
     static async toggleVerification(id: string) {
@@ -210,24 +177,15 @@ export class BookService {
 
         book.isVerified = !book.isVerified;
         await book.save();
-
         return { success: true, message: book.isVerified ? "Book request accepted" : "Book rejected", book };
     }
-
 
     // FETCH BY NAME OR ISBN
     static async fetchBookBy(name?: string, isbn?: string) {
         const query: any = { deletedAt: null };
+        if (name && name.trim() !== "") query.name = name.trim().toLowerCase();
+        if (isbn && isbn.trim() !== "") query.isbn = isbn.trim().toLowerCase();
 
-        if (name && name.trim() !== "") {
-            query.name = name.trim().toLowerCase();
-        }
-
-        if (isbn && isbn.trim() !== "") {
-            query.isbn = isbn.trim().toLowerCase();
-        }
-
-        // Must have at least one search key besides deletedAt
         if (Object.keys(query).length === 1) {
             throw new AppError("At least one search parameter must be provided", 400);
         }
@@ -237,41 +195,39 @@ export class BookService {
             { path: "genre", select: "name" },
             { path: "author", select: "name" }
         ]);
-
-        if (!book) {
-            throw new AppError("Book not found", 404);
-        }
-
+        if (!book) throw new AppError("Book not found", 404);
         return book;
     }
 
+    // FETCH SOFT DELETES
+    static async fetchSoftDelete(page: number = 1, limit: number = 10) {
+        const result = await paginateAggregation<IBook>(Book, { deletedAt: { $ne: null } }, {
+            page,
+            limit,
+            populate: [
+                { path: "category", select: "name" },
+                { path: "genre", select: "name" },
+                { path: "author", select: "name" }
+            ]
+        });
 
-    // FETCH SOFT DELETES 
-    static async fetchSoftDelete() {
-        const books = await Book.find({ deletedAt: { $ne: null } }).populate([
-            { path: "category", select: "name" },
-            { path: "genre", select: "name" },
-            { path: "author", select: "name" }
-        ]);
-
-        return { success: true, message: books.length ? "Trashed books fetched successfully" : "Trash is empty", books };
+        return {
+            success: true,
+            message: result.data.length ? "Trashed books fetched successfully" : "Trash is empty",
+            meta: result.meta,
+            books: result.data
+        };
     }
 
-
-    // FETCH BOOKS FOR PUBLIC WITH INVENTORY DETAILS WITH PAGINATION
+    //Pagination Helper Integration
     static async fetchBooksForPublic(page: number = 1, limit: number = 10) {
-        const safePage = Math.max(1, page);
-        const safeLimit = Math.max(1, limit);
-        const skip = (safePage - 1) * safeLimit;
-
-        const aggregationResult = await Book.aggregate([
+        const basePipeline = [
             {
                 $match: {
                     deletedAt: null,
                     isVerified: true
                 }
             },
-
             {
                 $lookup: {
                     from: "inventories",
@@ -280,7 +236,6 @@ export class BookService {
                     as: "inventoryDetails"
                 }
             },
-
             {
                 $addFields: {
                     inventoryDetails: {
@@ -297,7 +252,6 @@ export class BookService {
                     }
                 }
             },
-
             {
                 $addFields: {
                     totalAvailableStock: { $sum: "$inventoryDetails.stock" },
@@ -317,7 +271,6 @@ export class BookService {
                     }
                 }
             },
-
             {
                 $lookup: {
                     from: "categories",
@@ -327,7 +280,6 @@ export class BookService {
                 }
             },
             { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
-
             {
                 $lookup: {
                     from: "authors",
@@ -337,39 +289,24 @@ export class BookService {
                 }
             },
             { $unwind: { path: "$author", preserveNullAndEmptyArrays: true } },
-
             {
                 $sort: { createdAt: -1 }
-            },
-
-            {
-                $facet: {
-                    metadata: [
-                        { $count: "total" }
-                    ],
-                    data: [
-                        { $skip: skip },
-                        { $limit: safeLimit }
-                    ]
-                }
             }
-        ]);
+        ];
 
-        const totalBooks = aggregationResult[0]?.metadata[0]?.total || 0;
-        const books = aggregationResult[0]?.data || [];
-        const totalPages = Math.ceil(totalBooks / safeLimit);
+        const result = await paginateAggregation<any>(Book, basePipeline, { page, limit });
 
         return {
             success: true,
             meta: {
-                totalBooks,
-                totalPages,
-                currentPage: safePage,
-                limit: safeLimit,
-                hasNextPage: safePage < totalPages,
-                hasPrevPage: safePage > 1
+                totalBooks: result.meta.totalItems,
+                totalPages: result.meta.totalPages,
+                currentPage: result.meta.currentPage,
+                limit: result.meta.limit,
+                hasNextPage: result.meta.hasNextPage,
+                hasPrevPage: result.meta.hasPrevPage
             },
-            books
+            books: result.data
         };
     }
 }

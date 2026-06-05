@@ -21,8 +21,7 @@ export class OrderController {
         return userId;
     }
 
-
-    //PLACE ORDER FROM CART (Customer)
+    // PLACE ORDER FROM CART (Customer)
     static createOrder = catchAsync(async (req: Request, res: Response) => {
         const userId = OrderController.getUserIdOrThrow(req);
         const { shippingAddress, billingAddress, deliveryCharge } = req.body;
@@ -34,11 +33,10 @@ export class OrderController {
             deliveryCharge
         );
 
-        res.status(201).json(result);
+        return res.status(201).json(result);
     });
 
-
-    //PLACE DIRECT ORDER (Customer)
+    // PLACE DIRECT ORDER (Customer)
     static createDirectOrder = catchAsync(async (req: Request, res: Response) => {
         const userId = OrderController.getUserIdOrThrow(req);
         const { items, shippingAddress, billingAddress, deliveryCharge } = req.body;
@@ -51,60 +49,55 @@ export class OrderController {
             deliveryCharge
         );
 
-        res.status(201).json(result);
+        return res.status(201).json(result);
     });
 
-
-    //FETCH OWN ORDERS (Customer)
+    // FETCH OWN ORDERS (Customer)
     static getOwnOrders = catchAsync(async (req: Request, res: Response) => {
         const userId = OrderController.getUserIdOrThrow(req);
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 10;
+        const page = parseInt(req.query.page as string, 10) || 1;
+        const limit = parseInt(req.query.limit as string, 10) || 10;
 
         const result = await OrderService.fetchOwnOrders(userId, page, limit);
 
-        res.status(200).json(result);
+        return res.status(200).json(result);
     });
 
-
-    //FETCH OWN ORDER BY ID (Customer)
+    // FETCH OWN ORDER BY ID (Customer)
     static getOwnOrderById = catchAsync(async (req: Request, res: Response) => {
         const userId = OrderController.getUserIdOrThrow(req);
         const { id } = req.params;
 
         const result = await OrderService.fetchOwnOrderById(userId, id);
 
-        res.status(200).json(result);
+        return res.status(200).json(result);
     });
 
-
-    //CANCEL OWN ORDER (Customer)
+    // CANCEL OWN ORDER (Customer)
     static cancelOwnOrder = catchAsync(async (req: Request, res: Response) => {
         const userId = OrderController.getUserIdOrThrow(req);
         const { id } = req.params;
 
         const result = await OrderService.cancelOwnOrder(userId, id);
 
-        res.status(200).json(result);
+        return res.status(200).json(result);
     });
 
-
-    //FETCH VENDOR ORDERS (Vendor)
+    // FETCH VENDOR ORDERS (Vendor)
     static getVendorOrders = catchAsync(async (req: Request, res: Response) => {
         const vendorId = OrderController.getVendorIdOrThrow(req);
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 10;
+        const page = parseInt(req.query.page as string, 10) || 1;
+        const limit = parseInt(req.query.limit as string, 10) || 10;
 
         const result = await OrderService.fetchVendorOrders(vendorId, page, limit);
 
-        res.status(200).json(result);
+        return res.status(200).json(result);
     });
 
-
-    //FETCH ALL ORDERS (Admin)
+    // FETCH ALL ORDERS (Admin)
     static getAllOrders = catchAsync(async (req: Request, res: Response) => {
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 10;
+        const page = parseInt(req.query.page as string, 10) || 1;
+        const limit = parseInt(req.query.limit as string, 10) || 10;
         const orderStatus = req.query.orderStatus as string;
         const paymentStatus = req.query.paymentStatus as string;
 
@@ -115,21 +108,19 @@ export class OrderController {
             paymentStatus
         );
 
-        res.status(200).json(result);
+        return res.status(200).json(result);
     });
 
-
-    //FETCH ADMIN ORDER BY ID (Admin)
+    // FETCH ADMIN ORDER BY ID (Admin)
     static getOrderById = catchAsync(async (req: Request, res: Response) => {
         const { id } = req.params;
 
         const result = await OrderService.fetchAdminOrderById(id);
 
-        res.status(200).json(result);
+        return res.status(200).json(result);
     });
 
-
-    //UPDATE ORDER STATUS (Admin)
+    // UPDATE ORDER STATUS (Admin)
     static updateOrderStatus = catchAsync(async (req: Request, res: Response) => {
         const { id } = req.params;
         const { orderStatus } = req.body;
@@ -140,11 +131,10 @@ export class OrderController {
 
         const result = await OrderService.updateOrderStatus(id, orderStatus);
 
-        res.status(200).json(result);
+        return res.status(200).json(result);
     });
 
-    
-    //UPDATE PAYMENT STATUS (Admin)
+    // UPDATE PAYMENT STATUS (Admin)
     static updatePaymentStatus = catchAsync(async (req: Request, res: Response) => {
         const { id } = req.params;
         const { paymentStatus } = req.body;
@@ -155,6 +145,6 @@ export class OrderController {
 
         const result = await OrderService.updatePaymentStatus(id, paymentStatus);
 
-        res.status(200).json(result);
+        return res.status(200).json(result);
     });
 }

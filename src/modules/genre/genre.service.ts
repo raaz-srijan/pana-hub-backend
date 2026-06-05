@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import { AppError } from "../../shared/error/appError";
 import { Genre, IGenre } from "./genre.model";
+import { paginate } from "../../shared/helper/pagination";
 
 class GenrePayload {
     public readonly name: string;
@@ -72,16 +73,15 @@ export class GenreService {
         return { success: true, message: "Genre deleted successfully" };
     }
 
-    // FETCH REQUESTED GENRES
+    // REFACTORED: FETCH REQUESTED GENRES (PAGINATED)
     static async fetchRequestGenre(page: number = 1, limit: number = 10) {
-        const genres = await Genre.find({ isApproved: false })
-            .skip((page - 1) * limit)
-            .limit(limit);
+        const result = await paginate<IGenre>(Genre, { isApproved: false }, { page, limit });
 
         return {
             success: true,
-            message: genres.length ? "Genres fetched successfully" : "No genres found",
-            genres
+            message: result.data.length ? "Genres fetched successfully" : "No genres found",
+            meta: result.meta,
+            genres: result.data
         };
     }
 
@@ -99,16 +99,15 @@ export class GenreService {
         return { success: true, message, genre };
     }
 
-    // FETCH APPROVED GENRES
+    // REFACTORED: FETCH APPROVED GENRES (PAGINATED)
     static async fetchAllGenre(page: number = 1, limit: number = 10) {
-        const genres = await Genre.find({ isApproved: true })
-            .skip((page - 1) * limit)
-            .limit(limit);
+        const result = await paginate<IGenre>(Genre, { isApproved: true }, { page, limit });
 
         return {
             success: true,
-            message: genres.length ? "Genres fetched successfully" : "No genres found",
-            genres
+            message: result.data.length ? "Genres fetched successfully" : "No genres found",
+            meta: result.meta,
+            genres: result.data
         };
     }
 
@@ -121,7 +120,7 @@ export class GenreService {
         return genre;
     }
 
-    //VALIDATE GENRE
+    // VALIDATE GENRE
     static async validateGenre(ids: Types.ObjectId[]) {
         if (!ids || ids.length === 0) {
             throw new AppError("At least one genre is required", 400);
@@ -134,6 +133,5 @@ export class GenreService {
         }
 
         return existingGenre.map(genre => genre._id as Types.ObjectId);
-
     }
 }

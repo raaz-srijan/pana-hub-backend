@@ -2,12 +2,11 @@ import { AppError } from "../../shared/error/appError";
 import { Order } from "../order/order.model";
 import { Payment } from "./payment.model";
 import { Cart } from "../cart/cart.model";
-import { initiateKhaltiPayment, verifyKhaltiPayment } from "../../shared/helper/khalti";
 import { initiateEsewaPayment } from "../../shared/helper/esewa";
+import { initiateKhaltiPayment, verifyKhaltiPayment } from "../../shared/helper/khalti";
 
 export class PaymentService {
 
-    // 1. INITIATE PAYMENT STEP (Creates context & forwards to Gateway)
     static async initiatePayment(userId: string, orderId: string, paymentGateway: "khalti" | "esewa" | "cod") {
         const order = await Order.findOne({ _id: orderId, userId });
         if (!order) {
@@ -22,7 +21,6 @@ export class PaymentService {
             throw new AppError("Cannot initiate payment for a cancelled order.", 400);
         }
 
-        // Create or locate the tracking payment session document
         let payment = await Payment.findOne({ orderId: order._id, status: "pending" });
         if (!payment) {
             payment = await Payment.create({
@@ -40,7 +38,6 @@ export class PaymentService {
 
         const paymentIdStr = payment._id.toString();
 
-        // --- GATEWAY ROUTING LOGIC ---
         if (paymentGateway === "khalti") {
             const paymentUrl = await initiateKhaltiPayment(
                 order.grandTotal,
@@ -69,17 +66,14 @@ export class PaymentService {
         } 
         
         if (paymentGateway === "cod") {
-            // ✅ REBUILT COD LOGIC: Clean database alignment since there is no third-party redirect
-            payment.status = "completed"; // COD tracking session is immediately handled
+            payment.status = "completed"; 
             payment.gatewayTransactionId = `COD-${order._id.toString().substring(0, 8)}`;
             await payment.save();
 
-            // Keep paymentStatus as "unpaid" (since they pay at delivery), but verify the checkout order
             await Order.findByIdAndUpdate(order._id, { 
-                $set: { orderStatus: "processing" } // Moves from "pending" directly to vendor processing!
+                $set: { orderStatus: "processing" } 
             });
 
-            // Cleanly wipe the user database cart layout right now
             await Cart.findOneAndUpdate(
                 { userId: order.userId }, 
                 { $set: { items: [], grandTotal: 0, totalItems: 0 } }
@@ -96,20 +90,17 @@ export class PaymentService {
     }
 
 
-    // 2. VERIFY KHALTI TRANSACTION (Delayed execution workflow)
     static async verifyKhalti(pidx: string, userId: string) {
         if (!pidx) {
             throw new AppError("pidx is required for Khalti verification", 400);
         }
 
-        // Hit Khalti's verification lookup endpoint API
         const verificationData = await verifyKhaltiPayment(pidx);
         console.log("Khalti Verification Raw Data Payload:", verificationData);
 
         const externalOrderId = verificationData.purchase_order_id || verificationData.purchase_order_name;
         let payment = null;
 
-        // Sequence structural fallbacks to find transaction safely without throwing casting errors
         payment = await Payment.findOne({ gatewayTransactionId: pidx });
 
         if (!payment) {
@@ -128,14 +119,12 @@ export class PaymentService {
             throw new AppError("Payment transaction context mapping failed. Record not found.", 404);
         }
 
-        // Evaluate gateway validation responses
         if (verificationData.status === "Completed") {
             payment.status = "completed";
             payment.gatewayTransactionId = pidx;
             payment.gatewayResponse = verificationData;
             await payment.save();
 
-            // ✅ Success execution updates: Mark Paid & clear target database cart safely
             await Order.findByIdAndUpdate(payment.orderId, { $set: { paymentStatus: "paid" } });
             await Cart.findOneAndUpdate(
                 { userId: payment.userId }, 
@@ -148,7 +137,6 @@ export class PaymentService {
                 payment
             };
         } else {
-            // Failed execution updates
             payment.status = "failed";
             payment.gatewayResponse = verificationData;
             await payment.save();
@@ -160,7 +148,6 @@ export class PaymentService {
     }
 
 
-    // 3. VERIFY ESEWA TRANSACTION (Delayed execution workflow)
     static async verifyEsewa(data: string) {
         if (!data) {
             throw new AppError("Data payload is required for eSewa verification", 400);
@@ -193,7 +180,6 @@ export class PaymentService {
             payment.gatewayTransactionId = decodedData.transaction_code;
             await payment.save();
 
-            // ✅ Success execution updates: Mark Paid & clear target database cart safely
             await Order.findByIdAndUpdate(payment.orderId, { $set: { paymentStatus: "paid" } });
             await Cart.findOneAndUpdate(
                 { userId: payment.userId }, 
