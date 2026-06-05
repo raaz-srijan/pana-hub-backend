@@ -5,6 +5,7 @@ export interface PaginationOptions {
     limit?: number;
     sort?: any;
     populate?: PopulateOptions | PopulateOptions[] | string | string[];
+    select?: string; // Added to handle field projections safely
 }
 
 export interface PaginationResult<T> {
@@ -30,14 +31,19 @@ export async function paginate<T>(
     const skip = (currentPage - 1) * safeLimit;
     const sortOrder = options.sort || { createdAt: -1 };
 
+    let query = model.find(filter).sort(sortOrder).skip(skip).limit(safeLimit);
+
+    if (options.select) {
+        query = query.select(options.select);
+    }
+
+    if (options.populate) {
+        query = query.populate(options.populate as any);
+    }
+
     const [totalItems, data] = await Promise.all([
         model.countDocuments(filter),
-        model.find(filter)
-            .sort(sortOrder)
-            .skip(skip)
-            .limit(safeLimit)
-            .populate(options.populate as any)
-            .lean() 
+        query.lean().exec()
     ]);
 
     const totalPages = Math.ceil(totalItems / safeLimit) || 1;
