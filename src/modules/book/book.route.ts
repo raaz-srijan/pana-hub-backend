@@ -9,6 +9,7 @@ const router = Router();
 
 //PUBLIC ROUTES
 router.get("/search", BookController.searchBook); 
+router.get("/public", BookController.publicFetchBooks);
 router.get("/", BookController.getVerifiedBooks);
 router.get("/:id", BookController.getBookById);
 

@@ -256,4 +256,120 @@ export class BookService {
 
         return { success: true, message: books.length ? "Trashed books fetched successfully" : "Trash is empty", books };
     }
+
+
+    // FETCH BOOKS FOR PUBLIC WITH INVENTORY DETAILS WITH PAGINATION
+    static async fetchBooksForPublic(page: number = 1, limit: number = 10) {
+        const safePage = Math.max(1, page);
+        const safeLimit = Math.max(1, limit);
+        const skip = (safePage - 1) * safeLimit;
+
+        const aggregationResult = await Book.aggregate([
+            {
+                $match: {
+                    deletedAt: null,
+                    isVerified: true
+                }
+            },
+
+            {
+                $lookup: {
+                    from: "inventories",
+                    localField: "_id",
+                    foreignField: "bookId",
+                    as: "inventoryDetails"
+                }
+            },
+
+            {
+                $addFields: {
+                    inventoryDetails: {
+                        $filter: {
+                            input: "$inventoryDetails",
+                            as: "inv",
+                            cond: {
+                                $and: [
+                                    { $eq: ["$$inv.isActive", true] },
+                                    { $gt: ["$$inv.stock", 0] }
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+
+            {
+                $addFields: {
+                    totalAvailableStock: { $sum: "$inventoryDetails.stock" },
+                    lowestPrice: {
+                        $cond: {
+                            if: { $gt: [{ $size: "$inventoryDetails" }, 0] },
+                            then: { $min: "$inventoryDetails.price" },
+                            else: 0
+                        }
+                    },
+                    hasStock: {
+                        $cond: {
+                            if: { $gt: [{ $size: "$inventoryDetails" }, 0] },
+                            then: true,
+                            else: false
+                        }
+                    }
+                }
+            },
+
+            {
+                $lookup: {
+                    from: "categories",
+                    localField: "category",
+                    foreignField: "_id",
+                    as: "category"
+                }
+            },
+            { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
+
+            {
+                $lookup: {
+                    from: "authors",
+                    localField: "author",
+                    foreignField: "_id",
+                    as: "author"
+                }
+            },
+            { $unwind: { path: "$author", preserveNullAndEmptyArrays: true } },
+
+            {
+                $sort: { createdAt: -1 }
+            },
+
+            {
+                $facet: {
+                    metadata: [
+                        { $count: "total" }
+                    ],
+                    data: [
+                        { $skip: skip },
+                        { $limit: safeLimit }
+                    ]
+                }
+            }
+        ]);
+
+        const totalBooks = aggregationResult[0]?.metadata[0]?.total || 0;
+        const books = aggregationResult[0]?.data || [];
+        const totalPages = Math.ceil(totalBooks / safeLimit);
+
+        return {
+            success: true,
+            meta: {
+                totalBooks,
+                totalPages,
+                currentPage: safePage,
+                limit: safeLimit,
+                hasNextPage: safePage < totalPages,
+                hasPrevPage: safePage > 1
+            },
+            books
+        };
+    }
 }

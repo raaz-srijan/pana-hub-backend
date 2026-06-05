@@ -52,6 +52,21 @@ export class AuthService {
         return { payload, refreshToken };
     }
 
+        const accessToken = generateAccessToken(tokenPayload);
+        const refreshToken = generateRefreshToken(tokenPayload);
+
+        const payload = {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            isVerified: user.isVerified,
+            role: roleName,
+            accessToken
+        };
+
+        return { payload, refreshToken };
+    }
+
     
     //REFRESH
     static async refresh(token: string) {

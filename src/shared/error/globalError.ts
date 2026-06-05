@@ -11,8 +11,8 @@ const globalError: ErrorRequestHandler = (err, req, res, next) => {
 
   return res.status(statusCode).json({
     success: false,
-    message: message,
-    error: err.message
+    message: "Internal Server Error",
+    error:err.message
   });
 };
 

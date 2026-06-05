@@ -19,23 +19,15 @@ export class AuthController {
     });
 
 
-    //REFRESH TOKEN
+    //REFRESH-TOKEN
     static refreshToken = catchAsync(async (req: Request, res: Response) => {
+
         const token = req.cookies.refreshToken;
 
-        const { accessToken, refreshToken, user } = await AuthService.refresh(token);
 
-        res.cookie("refreshToken", refreshToken, {
-            httpOnly: true,
-            secure: false,
-            sameSite: "lax"
-        });
+        const user = await AuthService.refresh(token);
 
-        return res.status(200).json({
-            success: true,
-            message: "Token refreshed successfully",
-            data: { accessToken, user }
-        });
+        return res.status(200).json({ success: true, message: "Token refreshed successfully", data: user });
     });
 
 
