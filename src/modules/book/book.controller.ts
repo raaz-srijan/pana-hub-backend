@@ -89,4 +89,17 @@ export class BookController {
         const result = await BookService.fetchSoftDelete();
         return res.status(200).json(result);
     });
+
+
+    // FETCH BOOKS WITH INVENTORY DETAILS FOR PUBLIC
+    static publicFetchBooks = catchAsync(async (req: Request, res: Response) => {
+        const page = parseInt(req.query.page as string, 10) || 1;
+        const limit = parseInt(req.query.limit as string, 10) || 10;
+
+        const result = await BookService.fetchBooksForPublic(page, limit);
+
+        return res.status(200).json(result);
+    });
+
+
 }

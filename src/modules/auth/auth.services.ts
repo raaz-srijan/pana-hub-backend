@@ -52,10 +52,10 @@ export class AuthService {
         return { payload, refreshToken };
     }
 
+    
     //REFRESH
     static async refresh(token: string) {
-
-        const decoded = await verifyRefreshToken(token);
+        const decoded = verifyRefreshToken(token);
 
         const user = await UserService.getUserId(decoded.id);
         if (!user) {
