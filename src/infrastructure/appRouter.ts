@@ -8,9 +8,10 @@ import roleRoute from "../modules/role/role.route.js";
 import categoryRoute from "../modules/category/category.route.js";
 import genreRoute from "../modules/genre/genre.route.js";
 import authorRoute from "../modules/author/author.route.js";
-import bookRoute from "../modules/book/book.route.js"; 
-import inventoryRoute from "../modules/inventory/inventory.route.js";
-import cartRoute from "../modules/cart/cart.route.js";
+import bookRouter from "../modules/book/book.route.js";
+import orderRouter from "../modules/order/order.route.js";
+import paymentRouter from "../modules/payment/payment.route.js";
+import wishlistRouter from "../modules/wishlist/wishlist.route.js";
 
 const appRouter = Router();
 
@@ -21,9 +22,10 @@ appRouter.use("/permissions", permissionRoute);
 appRouter.use("/roles", roleRoute);
 appRouter.use("/categories", categoryRoute);
 appRouter.use("/genres", genreRoute);
-appRouter.use("/authors", authorRoute);       
-appRouter.use("/books", bookRoute);            
-appRouter.use("/inventories", inventoryRoute);
-appRouter.use("/cart", cartRoute);
+appRouter.use("/authors", authorRoute);
+appRouter.use("/books", bookRouter);
+appRouter.use("/orders", orderRouter);
+appRouter.use("/payment", paymentRouter);
+appRouter.use("/wishlist", wishlistRouter);
 
 export default appRouter;
