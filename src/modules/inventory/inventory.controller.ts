@@ -46,46 +46,46 @@ export class InventoryController {
     });
 
 
-    // FETCH ACTIVE ITEMS
+   // FETCH ACTIVE ITEMS (?search=...)
     static fetchActive = catchAsync(async (req: Request, res: Response) => {
         const vendorId = InventoryController.getVendorIdOrThrow(req);
+        const search = req.query.search as string | undefined;
 
-        const result = await InventoryService.fetchActive(vendorId);
-
+        const result = await InventoryService.fetchActive(vendorId, search);
         res.status(200).json(result);
     });
 
-
-    // FETCH INACTIVE ITEMS
+    
+    // FETCH INACTIVE ITEMS (?search=...)
     static fetchInactive = catchAsync(async (req: Request, res: Response) => {
         const vendorId = InventoryController.getVendorIdOrThrow(req);
+        const search = req.query.search as string | undefined;
 
-        const result = await InventoryService.fetchInactive(vendorId);
-
+        const result = await InventoryService.fetchInactive(vendorId, search);
         res.status(200).json(result);
     });
 
 
-    // FETCH ALL ITEMS
+    // FETCH ALL ITEMS (search)
     static fetchAll = catchAsync(async (req: Request, res: Response) => {
         const vendorId = InventoryController.getVendorIdOrThrow(req);
+        const search = req.query.search as string | undefined;
 
-        const result = await InventoryService.fetchAll(vendorId);
-
+        const result = await InventoryService.fetchAll(vendorId, search);
         res.status(200).json(result);
     });
 
 
-    // FETCH PUBLIC STOREFRONT ITEMS
+    // FETCH PUBLIC STOREFRONT ITEMS (?search=...)
     static fetchPublicStorefront = catchAsync(async (req: Request, res: Response) => {
         const { vendorId } = req.params;
+        const search = req.query.search as string | undefined;
 
         if (!vendorId) {
             throw new AppError("Vendor ID parameter is required", 400);
         }
 
-        const result = await InventoryService.fetchPublicStorefront(vendorId);
-
+        const result = await InventoryService.fetchPublicStorefront(vendorId, search);
         res.status(200).json(result);
     });
 }
