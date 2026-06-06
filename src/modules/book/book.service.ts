@@ -220,14 +220,29 @@ export class BookService {
         };
     }
 
-    // INVENTORY LOOKUP AGGREGATION
-    static async fetchBooksForPublic(page: number = 1, limit: number = 10) {
-        const basePipeline = [
+    // INVENTORY LOOKUP AGGREGATION WITH SEARCH CAPABILITIES
+    static async fetchBooksForPublic(page: number = 1, limit: number = 10, search?: string) {
+        const matchStage: any = {
+            deletedAt: null,
+            isVerified: true
+        };
+
+        // If a search query exists, create a case-insensitive regex pattern
+        if (search && search.trim() !== "") {
+            const cleanQuery = search.trim().toLowerCase();
+            const regex = new RegExp(cleanQuery, "i");
+
+            // Look up string metadata inside the Book document first
+            matchStage.$or = [
+                { name: regex },
+                { isbn: regex },
+                { publisher: regex }
+            ];
+        }
+
+        const basePipeline: any[] = [
             {
-                $match: {
-                    deletedAt: null,
-                    isVerified: true
-                }
+                $match: matchStage
             },
             {
                 $lookup: {
@@ -272,7 +287,6 @@ export class BookService {
                     }
                 }
             },
-            // FIXED: Changed "categories" lookup handling inside custom engine parameters down below
             {
                 $lookup: {
                     from: "categories",
@@ -291,7 +305,6 @@ export class BookService {
                 }
             },
             { $unwind: { path: "$author", preserveNullAndEmptyArrays: true } },
-            // Added explicit array-lookup support for genres to keep public rendering mirrors stable
             {
                 $lookup: {
                     from: "genres",
@@ -299,13 +312,34 @@ export class BookService {
                     foreignField: "_id",
                     as: "genre"
                 }
-            },
-            {
-                $sort: { createdAt: -1 }
             }
         ];
 
-        // Passing basePipeline directly so paginateAggregation doesn't try to build automated string lookups
+        // Advanced Stage: If search exists, perform post-lookup matches against populated strings
+        if (search && search.trim() !== "") {
+            const cleanQuery = search.trim().toLowerCase();
+            const regex = new RegExp(cleanQuery, "i");
+            const normalRegex = new RegExp(search.trim(), "i");
+
+            basePipeline.push({
+                $match: {
+                    $or: [
+                        { "name": regex },
+                        { "isbn": regex },
+                        { "publisher": regex },
+                        { "author.name": normalRegex },
+                        { "category.name": normalRegex },
+                        { "genre.name": normalRegex }
+                    ]
+                }
+            });
+        }
+
+        // Apply sorting criteria right before pagination slice
+        basePipeline.push({
+            $sort: { createdAt: -1 }
+        });
+
         const result = await paginateAggregation<any>(Book, basePipeline, { page, limit });
 
         return {
@@ -322,8 +356,7 @@ export class BookService {
         };
     }
 
-
-   // FETCH SINGLE VERIFIED BOOK WITH INVENTORY AND VENDOR DETAILS FOR PUBLIC
+    // FETCH SINGLE VERIFIED BOOK WITH INVENTORY AND VENDOR DETAILS FOR PUBLIC
     static async fetchBookByIdForPublic(id: string) {
         const pipeline = [
             {
@@ -367,12 +400,9 @@ export class BookService {
                     }
                 }
             },
-            // ==========================================
-            // NEW STAGE: Look up Vendor info for each inventory item
-            // ==========================================
             {
                 $lookup: {
-                    from: "vendors", // Mongoose collection name for your Vendor model
+                    from: "vendors", 
                     localField: "inventoryDetails.vendorId",
                     foreignField: "_id",
                     as: "vendorInfo"
@@ -407,13 +437,11 @@ export class BookService {
                     }
                 }
             },
-            // Clean up the temporary vendorInfo root array
             {
                 $project: {
                     vendorInfo: 0
                 }
             },
-            // ==========================================
             {
                 $addFields: {
                     totalAvailableStock: { $sum: "$inventoryDetails.stock" },

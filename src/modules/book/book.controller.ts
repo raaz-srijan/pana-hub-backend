@@ -90,12 +90,16 @@ export class BookController {
         return res.status(200).json(result);
     });
 
-    // FETCH BOOKS WITH INVENTORY DETAILS FOR PUBLIC (With Pagination)
+    // FETCH BOOKS WITH INVENTORY DETAILS FOR PUBLIC (With Pagination & Global Filter Support)
     static publicFetchBooks = catchAsync(async (req: Request, res: Response) => {
         const page = parseInt(req.query.page as string, 10) || 1;
         const limit = parseInt(req.query.limit as string, 10) || 10;
+        
+        // Extract the string directly from standard URL search params (?search=keyword)
+        const search = req.query.search as string || undefined;
 
-        const result = await BookService.fetchBooksForPublic(page, limit);
+        // Forward the search string parameter to the aggregation logic pipeline
+        const result = await BookService.fetchBooksForPublic(page, limit, search);
         return res.status(200).json(result);
     });
 
