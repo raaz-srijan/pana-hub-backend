@@ -1,11 +1,12 @@
-import mongoose, { Types } from "mongoose";
+import { Types } from "mongoose";
 import { AppError } from "../../shared/error/appError";
 import { Book, IBook } from "./book.model";
 import { deleteImage, uploadImage } from "../../infrastructure/imageHandler";
 import { CategoryService } from "../category/category.service";
 import { GenreService } from "../genre/genre.service";
 import { AuthorService } from "../author/author.service";
-import { paginateAggregation } from "../../shared/helper/pagination"; 
+import { paginate } from "../../shared/helper/pagination"; 
+import { paginateAggregation } from "../../shared/helper/pagination";
 
 class BookPayload {
     public readonly name: string;
@@ -124,11 +125,10 @@ export class BookService {
         return { success: true, message: "Book permanently erased from database" };
     }
 
-    // Standard queries use the generic helper correctly mapped to options object
     private static async bookFilter(filter: any = {}, page: number = 1, limit: number = 10) {
         const safeFilter = { ...filter, deletedAt: null };
         
-        const result = await paginateAggregation<IBook>(Book, safeFilter, {
+        const result = await paginate<IBook>(Book, safeFilter, {
             page,
             limit,
             sort: { createdAt: -1 },
@@ -201,9 +201,10 @@ export class BookService {
 
     // FETCH SOFT DELETES
     static async fetchSoftDelete(page: number = 1, limit: number = 10) {
-        const result = await paginateAggregation<IBook>(Book, { deletedAt: { $ne: null } }, {
+        const result = await paginate<IBook>(Book, { deletedAt: { $ne: null } }, {
             page,
             limit,
+            sort: { deletedAt: -1 },
             populate: [
                 { path: "category", select: "name" },
                 { path: "genre", select: "name" },
@@ -219,7 +220,7 @@ export class BookService {
         };
     }
 
-    //Pagination Helper Integration
+    // INVENTORY LOOKUP AGGREGATION
     static async fetchBooksForPublic(page: number = 1, limit: number = 10) {
         const basePipeline = [
             {
@@ -271,6 +272,7 @@ export class BookService {
                     }
                 }
             },
+            // FIXED: Changed "categories" lookup handling inside custom engine parameters down below
             {
                 $lookup: {
                     from: "categories",
@@ -289,11 +291,21 @@ export class BookService {
                 }
             },
             { $unwind: { path: "$author", preserveNullAndEmptyArrays: true } },
+            // Added explicit array-lookup support for genres to keep public rendering mirrors stable
+            {
+                $lookup: {
+                    from: "genres",
+                    localField: "genre",
+                    foreignField: "_id",
+                    as: "genre"
+                }
+            },
             {
                 $sort: { createdAt: -1 }
             }
         ];
 
+        // Passing basePipeline directly so paginateAggregation doesn't try to build automated string lookups
         const result = await paginateAggregation<any>(Book, basePipeline, { page, limit });
 
         return {
