@@ -321,4 +321,156 @@ export class BookService {
             books: result.data
         };
     }
+
+
+   // FETCH SINGLE VERIFIED BOOK WITH INVENTORY AND VENDOR DETAILS FOR PUBLIC
+    static async fetchBookByIdForPublic(id: string) {
+        const pipeline = [
+            {
+                $match: {
+                    _id: new Types.ObjectId(id),
+                    deletedAt: null,
+                    isVerified: true
+                }
+            },
+            {
+                $lookup: {
+                    from: "inventories",
+                    localField: "_id",
+                    foreignField: "bookId",
+                    as: "inventoryDetails"
+                }
+            },
+            {
+                $addFields: {
+                    inventoryDetails: {
+                        $filter: {
+                            input: "$inventoryDetails",
+                            as: "inv",
+                            cond: {
+                                $and: [
+                                    { $eq: ["$$inv.isActive", true] },
+                                    { $gt: ["$$inv.stock", 0] }
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    inventoryDetails: {
+                        $sortArray: {
+                            input: "$inventoryDetails",
+                            sortBy: { price: 1 }
+                        }
+                    }
+                }
+            },
+            // ==========================================
+            // NEW STAGE: Look up Vendor info for each inventory item
+            // ==========================================
+            {
+                $lookup: {
+                    from: "vendors", // Mongoose collection name for your Vendor model
+                    localField: "inventoryDetails.vendorId",
+                    foreignField: "_id",
+                    as: "vendorInfo"
+                }
+            },
+            {
+                $addFields: {
+                    inventoryDetails: {
+                        $map: {
+                            input: "$inventoryDetails",
+                            as: "inv",
+                            in: {
+                                $mergeObjects: [
+                                    "$$inv",
+                                    {
+                                        vendor: {
+                                            $arrayElemAt: [
+                                                {
+                                                    $filter: {
+                                                        input: "$vendorInfo",
+                                                        as: "v",
+                                                        cond: { $eq: ["$$v._id", "$$inv.vendorId"] }
+                                                    }
+                                                },
+                                                0
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            // Clean up the temporary vendorInfo root array
+            {
+                $project: {
+                    vendorInfo: 0
+                }
+            },
+            // ==========================================
+            {
+                $addFields: {
+                    totalAvailableStock: { $sum: "$inventoryDetails.stock" },
+                    lowestPrice: {
+                        $cond: {
+                            if: { $gt: [{ $size: "$inventoryDetails" }, 0] },
+                            then: { $min: "$inventoryDetails.price" },
+                            else: 0
+                        }
+                    },
+                    hasStock: {
+                        $cond: {
+                            if: { $gt: [{ $size: "$inventoryDetails" }, 0] },
+                            then: true,
+                            else: false
+                        }
+                    }
+                }
+            },
+            {
+                $lookup: {
+                    from: "categories",
+                    localField: "category",
+                    foreignField: "_id",
+                    as: "category"
+                }
+            },
+            { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
+            {
+                $lookup: {
+                    from: "authors",
+                    localField: "author",
+                    foreignField: "_id",
+                    as: "author"
+                }
+            },
+            { $unwind: { path: "$author", preserveNullAndEmptyArrays: true } },
+            {
+                $lookup: {
+                    from: "genres",
+                    localField: "genre",
+                    foreignField: "_id",
+                    as: "genre"
+                }
+            }
+        ];
+
+        const result = await Book.aggregate(pipeline);
+
+        if (!result || result.length === 0) {
+            throw new AppError("Book not found or unavailable for public viewing", 404);
+        }
+
+        return {
+            success: true,
+            message: "Public book details fetched successfully",
+            book: result[0]
+        };
+    }
 }

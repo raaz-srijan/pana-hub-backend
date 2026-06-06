@@ -98,4 +98,11 @@ export class BookController {
         const result = await BookService.fetchBooksForPublic(page, limit);
         return res.status(200).json(result);
     });
+
+    // FETCH A SINGLE BOOK WITH INVENTORY DETAILS FOR PUBLIC
+    static publicFetchBookById = catchAsync(async (req: Request, res: Response) => {
+        const { id } = req.params;
+        const result = await BookService.fetchBookByIdForPublic(id);
+        return res.status(200).json(result);
+    });
 }
