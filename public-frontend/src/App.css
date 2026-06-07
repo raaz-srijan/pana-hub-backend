@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --color-background: #F8F9FC;
+  --color-heading: #111111;
+  --color-ui-dark: #0F172A;
+  --color-ui-muted: #64748B; 
+  --color-card-bg: #FFFFFF;  
+
+  --font-serif: 'Merriweather', serif;
+  --font-sans: 'Inter', sans-serif;
+}
+
+.container {
+  @apply max-w-[1400px] mx-auto font-sans text-heading 
+}
+
+.slick-slide {
+  opacity: 0.65;
+  transition: all 0.4s ease-in-out;
+  transform: scale(0.92);
+}
+
+.slick-center {
+  opacity: 1 !important;
+  transform: scale(1) !important;
+}
+
+.slick-prev:before, .slick-next:before {
+  color: #0f172a !important;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgb(229, 231, 235); /* gray-200 */
+    border-radius: 20px;
+  }
+  .scrollbar-thin:hover::-webkit-scrollbar-thumb {
+    background-color: rgb(209, 213, 219); /* gray-300 */
+  }
