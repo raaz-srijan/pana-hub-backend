@@ -24,12 +24,13 @@ export class GenreController {
         return res.status(200).json(result);
     });
 
-    // FETCH REQUESTED GENRES (PAGINATED)
+    // FETCH REQUESTED GENRES (PAGINATED & SEARCHABLE)
     static fetchRequestGenre = catchAsync(async (req: Request, res: Response) => {
         const page = parseInt(req.query.page as string, 10) || 1;
         const limit = parseInt(req.query.limit as string, 10) || 10;
+        const search = req.query.search as string | undefined;
 
-        const result = await GenreService.fetchRequestGenre(page, limit);
+        const result = await GenreService.fetchRequestGenre(page, limit, search);
         return res.status(200).json(result);
     });
 
@@ -40,12 +41,13 @@ export class GenreController {
         return res.status(200).json(result);
     });
 
-    // FETCH APPROVED GENRES (PAGINATED)
+    // FETCH APPROVED GENRES (PAGINATED & SEARCHABLE)
     static fetchAllGenre = catchAsync(async (req: Request, res: Response) => {
         const page = parseInt(req.query.page as string, 10) || 1;
         const limit = parseInt(req.query.limit as string, 10) || 10;
+        const search = req.query.search as string | undefined;
 
-        const result = await GenreService.fetchAllGenre(page, limit);
+        const result = await GenreService.fetchAllGenre(page, limit, search);
         return res.status(200).json(result);
     });
 

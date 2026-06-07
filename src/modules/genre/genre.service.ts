@@ -73,9 +73,19 @@ export class GenreService {
         return { success: true, message: "Genre deleted successfully" };
     }
 
-    // REFACTORED: FETCH REQUESTED GENRES (PAGINATED)
-    static async fetchRequestGenre(page: number = 1, limit: number = 10) {
-        const result = await paginate<IGenre>(Genre, { isApproved: false }, { page, limit });
+    // UPDATED: FETCH REQUESTED GENRES WITH SEARCH (PAGINATED)
+    static async fetchRequestGenre(page: number = 1, limit: number = 10, search?: string) {
+        const query: any = { isApproved: false };
+
+        if (search) {
+            const searchRegex = new RegExp(search.trim(), "i");
+            query.$or = [
+                { name: searchRegex },
+                { desc: searchRegex }
+            ];
+        }
+
+        const result = await paginate<IGenre>(Genre, query, { page, limit });
 
         return {
             success: true,
@@ -99,9 +109,19 @@ export class GenreService {
         return { success: true, message, genre };
     }
 
-    // REFACTORED: FETCH APPROVED GENRES (PAGINATED)
-    static async fetchAllGenre(page: number = 1, limit: number = 10) {
-        const result = await paginate<IGenre>(Genre, { isApproved: true }, { page, limit });
+    // UPDATED: FETCH APPROVED GENRES WITH SEARCH (PAGINATED)
+    static async fetchAllGenre(page: number = 1, limit: number = 10, search?: string) {
+        const query: any = { isApproved: true };
+
+        if (search) {
+            const searchRegex = new RegExp(search.trim(), "i");
+            query.$or = [
+                { name: searchRegex },
+                { desc: searchRegex }
+            ];
+        }
+
+        const result = await paginate<IGenre>(Genre, query, { page, limit });
 
         return {
             success: true,
