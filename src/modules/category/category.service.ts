@@ -58,9 +58,19 @@ export class CategoryService {
         return { success: true, message: "Category deleted successfully" };
     }
 
-    // REFACTORED: FETCH REQUESTED CATEGORIES
-    static async fetchRequestCat(page: number = 1, limit: number = 10) {
-        const result = await paginate<ICategory>(Category, { isApproved: false }, { page, limit });
+    // UPDATED: FETCH REQUESTED CATEGORIES WITH SEARCH
+    static async fetchRequestCat(page: number = 1, limit: number = 10, search?: string) {
+        const query: any = { isApproved: false };
+
+        if (search) {
+            const searchRegex = new RegExp(search.trim(), "i");
+            query.$or = [
+                { name: searchRegex },
+                { desc: searchRegex }
+            ];
+        }
+
+        const result = await paginate<ICategory>(Category, query, { page, limit });
         
         return { 
             success: true, 
@@ -84,9 +94,19 @@ export class CategoryService {
         return { success: true, message: message, category };
     }
 
-    // REFACTORED: FETCH APPROVED CATEGORIES
-    static async fetchAllCat(page: number = 1, limit: number = 10) {
-        const result = await paginate<ICategory>(Category, { isApproved: true }, { page, limit });
+    // UPDATED: FETCH APPROVED CATEGORIES WITH SEARCH
+    static async fetchAllCat(page: number = 1, limit: number = 10, search?: string) {
+        const query: any = { isApproved: true };
+
+        if (search) {
+            const searchRegex = new RegExp(search.trim(), "i");
+            query.$or = [
+                { name: searchRegex },
+                { desc: searchRegex }
+            ];
+        }
+
+        const result = await paginate<ICategory>(Category, query, { page, limit });
 
         return { 
             success: true, 
