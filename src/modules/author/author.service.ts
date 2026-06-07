@@ -70,11 +70,24 @@ export class AuthorService {
         return { success: true, message: "Author deleted successfully" };
     }
 
+    // UPDATED: CENTRALIZED GENERIC FETCH WITH SEARCH SUPPORT
     private static async genericFetch(
         filter: mongoose.QueryFilter<IAuthor> = {}, 
-        options: PaginationOptions = {}
+        options: PaginationOptions = {},
+        search?: string
     ) {
-        const result = await paginate<IAuthor>(Author, filter, options);
+        // Create a shallow copy of the base filter to safely add properties
+        const query: any = { ...filter };
+
+        if (search) {
+            const searchRegex = new RegExp(search.trim(), "i");
+            query.$or = [
+                { name: searchRegex },
+                { bio: searchRegex }
+            ];
+        }
+
+        const result = await paginate<IAuthor>(Author, query, options);
         
         return {
             success: result.success,
@@ -84,16 +97,19 @@ export class AuthorService {
         };
     }
 
-    static async fetchVerifiedAuthors(page?: number, limit?: number) {
-        return await this.genericFetch({ isVerified: true }, { page, limit });
+    // UPDATED WITH SEARCH PARAMETER
+    static async fetchVerifiedAuthors(page?: number, limit?: number, search?: string) {
+        return await this.genericFetch({ isVerified: true }, { page, limit }, search);
     }
 
-    static async fetchAllAuthors(page?: number, limit?: number) {
-        return await this.genericFetch({}, { page, limit });
+    // UPDATED WITH SEARCH PARAMETER
+    static async fetchAllAuthors(page?: number, limit?: number, search?: string) {
+        return await this.genericFetch({}, { page, limit }, search);
     }
 
-    static async fetchUnverifiedAuthors(page?: number, limit?: number) {
-        return await this.genericFetch({ isVerified: false }, { page, limit });
+    // UPDATED WITH SEARCH PARAMETER
+    static async fetchUnverifiedAuthors(page?: number, limit?: number, search?: string) {
+        return await this.genericFetch({ isVerified: false }, { page, limit }, search);
     }
 
     // FETCH BY ID

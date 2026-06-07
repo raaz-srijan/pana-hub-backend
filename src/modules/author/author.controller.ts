@@ -29,30 +29,33 @@ export class AuthorController {
         return res.status(200).json(result);
     });
 
-    // GET ALL AUTHORS (With Pagination Context)
+    // GET ALL AUTHORS (With Pagination & Search Context)
     static getAllAuthors = catchAsync(async (req: Request, res: Response) => {
         const page = parseInt(req.query.page as string, 10) || 1;
         const limit = parseInt(req.query.limit as string, 10) || 10;
+        const search = req.query.search as string | undefined;
 
-        const result = await AuthorService.fetchAllAuthors(page, limit);
+        const result = await AuthorService.fetchAllAuthors(page, limit, search);
         return res.status(200).json(result);
     });
 
-    // GET VERIFIED AUTHORS (With Pagination Context)
+    // GET VERIFIED AUTHORS (With Pagination & Search Context)
     static getVerifiedAuthors = catchAsync(async (req: Request, res: Response) => {
         const page = parseInt(req.query.page as string, 10) || 1;
         const limit = parseInt(req.query.limit as string, 10) || 10;
+        const search = req.query.search as string | undefined;
 
-        const result = await AuthorService.fetchVerifiedAuthors(page, limit);
+        const result = await AuthorService.fetchVerifiedAuthors(page, limit, search);
         return res.status(200).json(result);
     });
 
-    // GET UNVERIFIED AUTHORS (With Pagination Context)
+    // GET UNVERIFIED AUTHORS (With Pagination & Search Context)
     static getUnverifiedAuthors = catchAsync(async (req: Request, res: Response) => {
         const page = parseInt(req.query.page as string, 10) || 1;
         const limit = parseInt(req.query.limit as string, 10) || 10;
+        const search = req.query.search as string | undefined;
 
-        const result = await AuthorService.fetchUnverifiedAuthors(page, limit);
+        const result = await AuthorService.fetchUnverifiedAuthors(page, limit, search);
         return res.status(200).json(result);
     });
 
