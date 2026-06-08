@@ -12,10 +12,8 @@ router.use(auth, restrictTo("vendor"), requireVendor);
 
 router.post("/", InventoryController.addItem);
 router.get("/", InventoryController.fetchAll);
-
 router.get("/active", InventoryController.fetchActive);
 router.get("/inactive", InventoryController.fetchInactive);
-
 router.patch("/:id", InventoryController.updateItem);
 router.delete("/:id", InventoryController.deleteItem);
 

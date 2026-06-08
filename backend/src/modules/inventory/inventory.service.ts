@@ -119,77 +119,108 @@ export class InventoryService {
         return { success: true, message: "Item deactivated and removed from store view successfully" };
     };
 
+    
+    //ITEM FILTER
+   private static async itemFilter(
+        vendorId: string, 
+        filter: Record<string, any> = {}, 
+        searchQuery?: string
+    ) {
+        const pipeline: any[] = [
+            { $match: { vendorId: new mongoose.Types.ObjectId(vendorId), ...filter } }
+        ];
 
-    // FETCH FOR FILTER
-    private static async itemFilter(vendorId: string, filter: Record<string, any> = {}) {
-        const query = { vendorId, ...filter };
+        pipeline.push(
+            {
+                $lookup: {
+                    from: "books",
+                    localField: "bookId",
+                    foreignField: "_id",
+                    as: "bookId"
+                }
+            },
+            { $unwind: "$bookId" }
+        );
 
-        const items = await Inventory.find(query)
-            .populate([
-                {
-                    path: "bookId",
-                    select: "name isbn coverImage author category",
-                    populate: [
-                        { path: "author", select: "name" },
-                        { path: "category", select: "name" }
+        pipeline.push(
+            {
+                $lookup: {
+                    from: "authors",
+                    localField: "bookId.author",
+                    foreignField: "_id",
+                    as: "bookId.author"
+                }
+            },
+            { $unwind: { path: "$bookId.author", preserveNullAndEmptyArrays: true } },
+            {
+                $lookup: {
+                    from: "categories",
+                    localField: "bookId.category",
+                    foreignField: "_id",
+                    as: "bookId.category"
+                }
+            },
+            { $unwind: { path: "$bookId.category", preserveNullAndEmptyArrays: true } }
+        );
+
+        if (searchQuery && searchQuery.trim() !== "") {
+            const regex = new RegExp(searchQuery.trim(), "i");
+            pipeline.push({
+                $match: {
+                    $or: [
+                        { "bookId.name": regex },
+                        { "bookId.isbn": regex },
+                        { "bookId.author.name": regex },
+                        { "bookId.category.name": regex }
                     ]
                 }
-            ])
-            .sort({ createdAt: -1 });
+            });
+        }
 
-        return { success: true, message: items.length ? "Items fetched successfully" : "No items available", data: items };
+        pipeline.push({ $sort: { createdAt: -1 } });
+
+        const items = await Inventory.aggregate(pipeline);
+
+        return {
+            success: true,
+            message: items.length ? "Items fetched successfully" : "No items available",
+            data: items
+        };
     }
 
 
-    // FETCH INACTIVE ITEMS
-    static async fetchInactive(vendorId: string) {
+    // FETCH INACTIVE ITEMS WITH SEARCH
+    static async fetchInactive(vendorId: string, search?: string) {
         await VendorService.fetchVendorByID(vendorId);
-        return await this.itemFilter(vendorId, { isActive: false });
+        return await this.itemFilter(vendorId, { isActive: false }, search);
     }
 
 
-    // FETCH ACTIVE ITEMS
-    static async fetchActive(vendorId: string) {
+    // FETCH ACTIVE ITEMS WITH SEARCH
+    static async fetchActive(vendorId: string, search?: string) {
         await VendorService.fetchVendorByID(vendorId);
-        return await this.itemFilter(vendorId, { isActive: true });
+        return await this.itemFilter(vendorId, { isActive: true }, search);
     }
 
 
-    // FETCH ALL ITEMS
-    static async fetchAll(vendorId: string) {
+    // FETCH ALL ITEMS WITH SEARCH
+    static async fetchAll(vendorId: string, search?: string) {
         await VendorService.fetchVendorByID(vendorId);
-        return await this.itemFilter(vendorId, {});
+        return await this.itemFilter(vendorId, {}, search);
     }
 
 
-    // FETCH PUBLIC STOREFRONT
-    static async fetchPublicStorefront(vendorId: string) {
+    // FETCH PUBLIC STOREFRONT WITH SEARCH
+    static async fetchPublicStorefront(vendorId: string, search?: string) {
         const vendor = await VendorService.fetchVendorByID(vendorId);
         if (!vendor.isVerified) {
             throw new AppError("Storefront is currently unavailable", 404);
         }
 
-        //Fetch only active items with stock greater than 0
-        const items = await Inventory.find({
-            vendorId: vendor._id,
-            isActive: true,
-            stock: { $gt: 0 }
-        })
-            .populate([
-                {
-                    path: "bookId",
-                    select: "name isbn coverImage author category",
-                    populate: [
-                        { path: "author", select: "name" },
-                        { path: "category", select: "name" }
-                    ]
-                }
-            ])
-            .select("-stockReminder -createdAt -updatedAt")
-            .sort({ createdAt: -1 });
-
-        return {
-            success: true, message: "Storefront items retrieved successfully", storeName: vendor.vendorName, address: vendor.address, data: items
-        };
+        return await this.itemFilter(
+            vendorId, 
+            { isActive: true, stock: { $gt: 0 } }, 
+            search
+        );
     }
 }

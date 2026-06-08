@@ -1,5 +1,6 @@
 import { AppError } from "../../shared/error/appError";
 import { Category, ICategory } from "./category.model";
+import { paginate } from "../../shared/helper/pagination";
 
 class CategoryPayload {
     public readonly name: string;
@@ -8,7 +9,7 @@ class CategoryPayload {
     constructor(data: Partial<ICategory>) {
         if (!data || !data.name) {
             throw new AppError("Please fill all the required fields", 400);
-        };
+        }
 
         this.name = data.name.trim().toLowerCase();
         this.desc = data.desc?.trim();
@@ -16,13 +17,11 @@ class CategoryPayload {
 }
 
 export class CategoryService {
-    //REQUEST CATEGORY
+    // REQUEST CATEGORY
     static async requestCat(data: ICategory) {
-
         const input = new CategoryPayload(data);
 
         const existCat = await Category.findOne({ name: input.name });
-
         if (existCat)
             throw new AppError("Category with same name already exists", 409);
 
@@ -31,13 +30,11 @@ export class CategoryService {
         return { success: true, message: "Category request sent", newCat };
     }
 
-
-    //UPDATE CATEGORY
+    // UPDATE CATEGORY
     static async updateCat(id: string, data: ICategory) {
         const input = new CategoryPayload(data);
 
         const findCat = await Category.findById(id);
-
         if (!findCat)
             throw new AppError("Category not found", 404);
 
@@ -50,26 +47,40 @@ export class CategoryService {
         const update = await Category.findByIdAndUpdate(id, { $set: updateData }, { new: true, runValidators: true });
 
         return { success: true, message: "Category updated successfully", update };
-    };
+    }
 
-
-    //DELETE CATEGORY
+    // DELETE CATEGORY
     static async deleteCat(id: string) {
         const category = await Category.findByIdAndDelete(id);
 
         if (!category)
             throw new AppError("Category not found", 404);
         return { success: true, message: "Category deleted successfully" };
-    };
-
-
-    //FETCH REQUESTED CATEGORIES
-    static async fetchRequestCat(page: number = 1, limit: number = 10) {
-        const categories = await Category.find({ isApproved: false }).skip((page - 1) * limit).limit(limit)
-        return { success: true, message: categories.length ? "Categories fetched successfully" : "No categories found", categories };
     }
 
-    //TOGGLE APPROVE
+    // UPDATED: FETCH REQUESTED CATEGORIES WITH SEARCH
+    static async fetchRequestCat(page: number = 1, limit: number = 10, search?: string) {
+        const query: any = { isApproved: false };
+
+        if (search) {
+            const searchRegex = new RegExp(search.trim(), "i");
+            query.$or = [
+                { name: searchRegex },
+                { desc: searchRegex }
+            ];
+        }
+
+        const result = await paginate<ICategory>(Category, query, { page, limit });
+        
+        return { 
+            success: true, 
+            message: result.data.length ? "Categories fetched successfully" : "No categories found", 
+            meta: result.meta,
+            categories: result.data 
+        };
+    }
+
+    // TOGGLE APPROVE
     static async toggleApprove(id: string) {
         const category = await Category.findById(id);
 
@@ -81,18 +92,31 @@ export class CategoryService {
 
         const message = category.isApproved ? "Category approved" : "Category disapproved";
         return { success: true, message: message, category };
-    };
-
-
-    //FETCH APPROVED CATEGORIES
-    static async fetchAllCat(page: number = 1, limit: number = 10) {
-        const categories = await Category.find({ isApproved: true }).skip((page - 1) * limit).limit(limit);
-
-        return { success: true, message: categories.length ? "Categories fetched successfully" : "No categories found", categories };
     }
 
+    // UPDATED: FETCH APPROVED CATEGORIES WITH SEARCH
+    static async fetchAllCat(page: number = 1, limit: number = 10, search?: string) {
+        const query: any = { isApproved: true };
 
-    //GET CATEGORY NAME
+        if (search) {
+            const searchRegex = new RegExp(search.trim(), "i");
+            query.$or = [
+                { name: searchRegex },
+                { desc: searchRegex }
+            ];
+        }
+
+        const result = await paginate<ICategory>(Category, query, { page, limit });
+
+        return { 
+            success: true, 
+            message: result.data.length ? "Categories fetched successfully" : "No categories found", 
+            meta: result.meta,
+            categories: result.data 
+        };
+    }
+
+    // GET CATEGORY NAME
     static async getCatName(name: string) {
         const category = await Category.findOne({ name: name.trim().toLowerCase() });
 

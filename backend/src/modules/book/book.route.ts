@@ -6,16 +6,16 @@ import { upload } from "../../shared/middleware/upload";
 
 const router = Router();
 
+router.get("/search", BookController.searchBook);
 
-//PUBLIC ROUTES
-router.get("/search", BookController.searchBook); 
 router.get("/public", BookController.publicFetchBooks);
+
+router.get("/public/:id", BookController.publicFetchBookById);
 router.get("/", BookController.getVerifiedBooks);
 router.get("/:id", BookController.getBookById);
 
 router.use(auth);
 
-//ADMIN ONLY ROUTES
 router.get("/admin/all", restrictTo("admin"), BookController.getAllBooks);
 router.get("/admin/unverified", restrictTo("admin"), BookController.getUnVerifiedBooks);
 router.get("/admin/trash", restrictTo("admin"), BookController.getTrashedBooks);
@@ -23,10 +23,8 @@ router.get("/admin/trash", restrictTo("admin"), BookController.getTrashedBooks);
 router.patch("/:id/verify", restrictTo("admin"), BookController.toggleVerification);
 router.delete("/:id/permanent", restrictTo("admin"), BookController.permanentlyDeleteBook);
 
-
-// VENDOR (OR ADMIN) ROUTES
 router.post("/", restrictTo("vendors", "admin"), upload.single("image"), BookController.addBook);
 router.put("/:id", restrictTo("vendors", "admin"), upload.single("image"), BookController.updateBook);
-router.delete("/:id", restrictTo("vendors", "admin"), BookController.deleteBook); 
+router.delete("/:id", restrictTo("vendors", "admin"), BookController.deleteBook);
 
 export default router;
