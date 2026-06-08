@@ -8,8 +8,4 @@ export const khaltiConfig = {
     successUrl: `${ENV.FRONTEND_URL}/payment-success`,
     failureUrl: `${ENV.FRONTEND_URL}/payment-failed`,
     websiteUrl: ENV.FRONTEND_URL || "http://localhost:5173",
-<<<<<<< HEAD
 };
-=======
-};
->>>>>>> d2f16803441089d0f9cb6ca8822d8c1985f2ee31

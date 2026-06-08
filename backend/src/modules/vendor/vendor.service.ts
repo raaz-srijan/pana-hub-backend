@@ -164,10 +164,20 @@ export class VendorService {
 
     //VENDOR BY USER ID
     static async findByUserId(userId: string) {
-    const vendor = await Vendor.findOne({ userId });
-    if (!vendor) {
-        throw new AppError("Access denied. No vendor profile found for this account.", 403);
+        const vendor = await Vendor.findOne({ userId });
+        if (!vendor) {
+            throw new AppError("Access denied. No vendor profile found for this account.", 403);
+        }
+        return vendor;
     }
-    return vendor;
-}
+
+    //FETCH EVERY VENDORS
+    static async fetchAllVendors() {
+        const vendors = await Vendor.find();
+        if (vendors.length === 0) {
+            throw new AppError("Vendors not found", 404);
+        }
+
+        return vendors;
+    }
 }
