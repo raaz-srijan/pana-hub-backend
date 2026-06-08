@@ -88,4 +88,13 @@ export class InventoryController {
 
         res.status(200).json(result);
     });
+
+
+    static getOwnInventory = catchAsync(async (req: Request, res: Response) => {
+        if(!req.vendorId)
+            throw new AppError("Please login", 401);
+        const vendor = req.vendorId;
+        const result = await InventoryService.fetchOwnInventory(vendor.toString());
+        return res.status(200).json(result);
+    });
 }

@@ -3,6 +3,7 @@ import { VendorService } from "../vendor/vendor.service";
 import { IInventory, Inventory } from "./inventory.model";
 import { AppError } from "../../shared/error/appError";
 import { BookService } from "../book/book.service";
+import { UserService } from "../user/user.service";
 
 class InventoryPayload {
     public readonly bookName?: string;
@@ -191,5 +192,11 @@ export class InventoryService {
         return {
             success: true, message: "Storefront items retrieved successfully", storeName: vendor.vendorName, address: vendor.address, data: items
         };
+    }
+
+    // FETCH OWN INVENTORY (Fixed: Corrected return types and mapped queries cleanly)
+    static async fetchOwnInventory(vendorId: string) {
+        await VendorService.fetchVendorByID(vendorId);
+        return await InventoryService.itemFilter(vendorId);
     }
 }

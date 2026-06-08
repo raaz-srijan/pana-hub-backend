@@ -13,6 +13,7 @@ router.use(auth, restrictTo("vendor"), requireVendor);
 router.post("/", InventoryController.addItem);
 router.get("/", InventoryController.fetchAll);
 
+router.get("/own", InventoryController.getOwnInventory);
 router.get("/active", InventoryController.fetchActive);
 router.get("/inactive", InventoryController.fetchInactive);
 

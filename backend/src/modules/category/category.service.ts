@@ -91,6 +91,21 @@ export class CategoryService {
         return { success: true, message: categories.length ? "Categories fetched successfully" : "No categories found", categories };
     }
 
+    //FETCH EVERY CATEGORIES
+    static async fetchEveryCat(page: number = 1, limit: number = 10) {
+    const safePage = Math.max(1, page);
+    const safeLimit = Math.max(1, limit);
+    const skip = (safePage - 1) * safeLimit;
+
+    // Notice we pass an empty filter {} to get absolutely everything
+    const categories = await Category.find({}).skip(skip).limit(safeLimit);
+
+    return { 
+        success: true, 
+        message: categories.length ? "All categories fetched successfully" : "No categories found", 
+        categories 
+    };
+}
 
     //GET CATEGORY NAME
     static async getCatName(name: string) {

@@ -49,6 +49,15 @@ export class GenreController {
         res.status(200).json(result);
     });
 
+    // FETCH EVERY SINGLE GENRE (APPROVED & UNAPPROVED)
+    static fetchEveryGenre = catchAsync(async (req: Request, res: Response) => {
+        const page = parseInt(req.query.page as string, 10) || 1;
+        const limit = parseInt(req.query.limit as string, 10) || 10;
+
+        const result = await GenreService.fetchEveryGenre(page, limit);
+        return res.status(200).json(result);
+    });
+
     // GET GENRE BY NAME
     static getGenreName = catchAsync(async (req: Request, res: Response) => {
         const { name } = req.params;

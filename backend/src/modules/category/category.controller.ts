@@ -49,6 +49,15 @@ export class CategoryController {
         res.status(200).json(result);
     });
 
+    // FETCH EVERY SINGLE CATEGORY (APPROVED & UNAPPROVED)
+    static fetchEveryCat = catchAsync(async (req: Request, res: Response) => {
+        const page = parseInt(req.query.page as string, 10) || 1;
+        const limit = parseInt(req.query.limit as string, 10) || 10;
+
+        const result = await CategoryService.fetchEveryCat(page, limit);
+        return res.status(200).json(result);
+    });
+
     // GET CATEGORY BY NAME
     static getCatName = catchAsync(async (req: Request, res: Response) => {
         const { name } = req.params;

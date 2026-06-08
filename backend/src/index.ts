@@ -18,7 +18,7 @@ import { cloudinaryConfig } from "./infrastructure/cloudinaryConfig";
 const app = express();
 
 app.use(cors({
-    origin: ENV.FRONTEND_URL,
+    origin: [ENV.FRONTEND_URL, ENV.VENDOR_FRONTEND_URL],
     credentials:true,
     methods: ["POST", "PUT", "PATCH", "GET", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"]

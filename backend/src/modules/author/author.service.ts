@@ -16,19 +16,18 @@ export class AuthorPayload {
     }
 }
 
-
 export class AuthorService {
 
-    //REQUEST AUTHOR
+    // REQUEST AUTHOR
     static async requestAuthor(data: Partial<IAuthor>, file: any) {
         const input = new AuthorPayload(data);
-
         let imageData = { imageUrl: "", publicUrl: "" };
 
         if (file) {
             const upload = await uploadImage(file.path);
             imageData = { imageUrl: upload.secure_url, publicUrl: upload.public_id };
-        };
+        }
+
         const newAuthor = await Author.create({
             name: input.name,
             bio: input.bio,
@@ -37,108 +36,88 @@ export class AuthorService {
         });
 
         return { success: true, message: "Request sent successfully", newAuthor };
-    };
+    }
 
-
-    //UPDATE AUTHOR
+    // UPDATE AUTHOR (Fixed: Handles partial updates correctly without crashing)
     static async updateAuthor(id: string, data: Partial<IAuthor>, file: any) {
-
         const findAuthor = await Author.findById(id);
-
-        if (!findAuthor)
-            throw new AppError("Author not found", 404);
-
-        const input = new AuthorPayload(data);
+        if (!findAuthor) throw new AppError("Author not found", 404);
 
         const updateData: any = { isVerified: false };
 
-        if (input.name) updateData.name = input.name;
-        if (input.bio) updateData.bio = input.bio;
+        if (data.name) updateData.name = data.name.trim().toLowerCase();
+        if (data.bio) updateData.bio = data.bio.trim();
 
         if (file) {
-            if (findAuthor.image?.publicUrl)
-                await deleteImage(findAuthor.image.publicUrl) //If there is image of an author previously
-
+            if (findAuthor.image?.publicUrl) {
+                await deleteImage(findAuthor.image.publicUrl);
+            }
             const upload = await uploadImage(file.path);
-            updateData.image = { imageUrl: upload.secure_url, publicUrl: upload.public_id }
+            updateData.image = { imageUrl: upload.secure_url, publicUrl: upload.public_id };
         }
 
         const author = await Author.findByIdAndUpdate(id, { $set: updateData }, { new: true, runValidators: true });
-
         return { success: true, message: "Author updated successfully", author };
-    };
+    }
 
-
-    //DELETE AUTHOR
+    // DELETE AUTHOR
     static async deleteAuthor(id: string) {
         const author = await Author.findByIdAndDelete(id);
+        if (!author) throw new AppError("Author not found", 404);
 
-        if (!author)
-            throw new AppError("Author not found", 404);
-
-        if (author.image?.publicUrl)
+        if (author.image?.publicUrl) {
             await deleteImage(author.image.publicUrl);
-
+        }
         return { success: true, message: "Author deleted successfully" };
-    };
+    }
 
-
-    //FILTER FOR FETCH
+    // PRIVATE GENERIC FETCH
     private static async genericFetch(filter: mongoose.QueryFilter<IAuthor> = {}) {
-
         const authors = await Author.find(filter);
-
-        return { success: true, message: authors.length ? "Authors fetched successfully" : "No authors available", authors }
+        return { success: true, message: authors.length ? "Authors fetched successfully" : "No authors available", authors };
     }
 
-
-    //FETCH VERIFIED AUTHORS
+    // FETCH VERIFIED AUTHORS
     static async fetchVerifiedAuthors() {
-        return await this.genericFetch({ isVerified: true });
+        return await AuthorService.genericFetch({ isVerified: true });
     }
 
-
-    //FETCH ALL AUTHORS
-    static async fetchAllAuthors() {
-        return await this.genericFetch();
-    }
-
-
-    //FETCH UNVERIFIED AUTHORS
+    // FETCH UNVERIFIED AUTHORS
     static async fetchUnverifiedAuthors() {
-        return await this.genericFetch({ isVerified: false });
+        return await AuthorService.genericFetch({ isVerified: false });
     }
 
+    // NEW / REFACTORED: FETCH EVERY AUTHOR (Explicit execution scope)
+    static async fetchAllAuthors() {
+        return await AuthorService.genericFetch();
+    }
 
-    //FETCH BY ID
+    // FETCH BY ID
     static async fetchAuthorById(id: string) {
         const author = await Author.findById(id);
-
-        if (!author)
-            throw new AppError("Author not found", 404);
-
+        if (!author) throw new AppError("Author not found", 404);
         return { success: true, message: "Author fetched successfully", author };
     }
 
-
-    //TOGGLE VERIFICATION
+    // TOGGLE VERIFICATION (Safe instance tracking)
     static async toggleVerification(id: string) {
-        const response = await this.fetchAuthorById(id);
+        const author = await Author.findById(id);
+        if (!author) throw new AppError("Author not found", 404);
 
-        const authorDoc = response.author;
+        author.isVerified = !author.isVerified;
+        await author.save();
 
-        authorDoc.isVerified = !authorDoc.isVerified;
-        await authorDoc.save();
+        return { success: true, message: author.isVerified ? "Author request accepted" : "Author rejected", author };
+    }
 
-        return { success: true, message: authorDoc.isVerified ? "Author request accepted" : "Author rejected", authorDoc };
-    };
+    // GET AUTHOR BY NAME / ID (Internal lookups)
+    static async getAuthorName(identifier: string) {
+        const query = mongoose.Types.ObjectId.isValid(identifier) 
+            ? { _id: identifier } 
+            : { name: identifier.trim().toLowerCase() };
 
-
-    //FETCH AUTHOR NAME
-    static async getAuthorName(name:string) {
-        const author = await Author.findOne({name:name.trim().toLowerCase()});
-        if(!author)
-            throw new AppError("Author not found", 404);
+        const author = await Author.findOne(query);
+        if (!author) throw new AppError("Author not found", 404);
         return author;
     }
 }

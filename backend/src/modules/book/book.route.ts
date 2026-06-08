@@ -6,27 +6,28 @@ import { upload } from "../../shared/middleware/upload";
 
 const router = Router();
 
-
-//PUBLIC ROUTES
+// 1. LITERAL / STATIC PATHS FIRST (Protected or Public)
 router.get("/search", BookController.searchBook); 
 router.get("/public", BookController.publicFetchBooks);
+router.get("/all", auth, restrictTo("admin", "vendors"), BookController.getAllBooks); // Fixed inline
 router.get("/", BookController.getVerifiedBooks);
-router.get("/:id", BookController.getBookById);
 
+// 2. DYNAMIC PATH PARAMETERS LAST
+router.get("/:id", BookController.getBookById); 
+
+
+// 3. MIDDLEWARE BARRIER FOR EVERYTHING BELOW
 router.use(auth);
 
-//ADMIN ONLY ROUTES
-router.get("/admin/all", restrictTo("admin"), BookController.getAllBooks);
+// ADMIN ONLY SYSTEM MANAGEMENT
 router.get("/admin/unverified", restrictTo("admin"), BookController.getUnVerifiedBooks);
 router.get("/admin/trash", restrictTo("admin"), BookController.getTrashedBooks);
-
 router.patch("/:id/verify", restrictTo("admin"), BookController.toggleVerification);
 router.delete("/:id/permanent", restrictTo("admin"), BookController.permanentlyDeleteBook);
 
-
-// VENDOR (OR ADMIN) ROUTES
-router.post("/", restrictTo("vendors", "admin"), upload.single("image"), BookController.addBook);
-router.put("/:id", restrictTo("vendors", "admin"), upload.single("image"), BookController.updateBook);
-router.delete("/:id", restrictTo("vendors", "admin"), BookController.deleteBook); 
+// VENDOR & ADMIN DATA MUTATIONS
+router.post("/", restrictTo("vendor", "admin"), upload.single("image"), BookController.addBook);
+router.put("/:id", restrictTo("vendor", "admin"), upload.single("image"), BookController.updateBook);
+router.delete("/:id", restrictTo("vendor", "admin"), BookController.deleteBook); 
 
 export default router;

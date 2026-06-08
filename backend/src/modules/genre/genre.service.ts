@@ -112,6 +112,20 @@ export class GenreService {
         };
     }
 
+    // FETCH EVERY SINGLE GENRE (Approved & Unapproved)
+    static async fetchEveryGenre(page: number = 1, limit: number = 10) {
+        const safePage = Math.max(1, page);
+        const safeLimit = Math.max(1, limit);
+        const skip = (safePage - 1) * safeLimit;
+
+        const genres = await Genre.find({}).skip(skip).limit(safeLimit);
+
+        return {
+            success: true,
+            message: genres.length ? "All genres fetched successfully" : "No genres found",
+            genres
+        };
+    }
     // GET GENRE BY NAME
     static async getGenreName(name: string) {
         const genre = await Genre.findOne({ name: name.trim().toLowerCase() });
