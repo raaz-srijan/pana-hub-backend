@@ -1,4 +1,5 @@
 import { Types } from "mongoose";
+import mongoose from "mongoose";
 import { AppError } from "../../shared/error/appError";
 import { Genre, IGenre } from "./genre.model";
 import { paginate } from "../../shared/helper/pagination";
@@ -35,8 +36,14 @@ export class GenreService {
         return { success: true, message: "Genre request sent", newGenre };
     }
 
-    // UPDATE GENRE
+    // UPDATE GENRE (Hardened)
     static async updateGenre(id: string, data: Partial<IGenre>) {
+        // 1. Guard against invalid hex string payloads intercepting this route
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            throw new AppError("Resource matching this parameter was not found", 404);
+        }
+
+        // 2. Safely perform data instantiation checks
         const input = new GenrePayload(data);
 
         const findGenre = await Genre.findById(id);
@@ -52,7 +59,7 @@ export class GenreService {
         const updateData: Partial<IGenre> = {
             name: input.name,
             desc: input.desc,
-            isApproved: false // Reset approval status on modification
+            isApproved: false
         };
 
         const update = await Genre.findByIdAndUpdate(
@@ -64,8 +71,12 @@ export class GenreService {
         return { success: true, message: "Genre updated successfully", update };
     }
 
-    // DELETE GENRE
+    // DELETE GENRE (Hardened)
     static async deleteGenre(id: string) {
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            throw new AppError("Resource matching this parameter was not found", 404);
+        }
+
         const genre = await Genre.findByIdAndDelete(id);
         if (!genre) {
             throw new AppError("Genre not found", 404);
@@ -73,7 +84,25 @@ export class GenreService {
         return { success: true, message: "Genre deleted successfully" };
     }
 
-    // UPDATED: FETCH REQUESTED GENRES WITH SEARCH (PAGINATED)
+    // TOGGLE APPROVE (Hardened)
+    static async toggleApprove(id: string) {
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            throw new AppError("Resource matching this parameter was not found", 404);
+        }
+
+        const genre = await Genre.findById(id);
+        if (!genre) {
+            throw new AppError("Genre not found", 404);
+        }
+
+        genre.isApproved = !genre.isApproved;
+        await genre.save();
+
+        const message = genre.isApproved ? "Genre approved" : "Genre disapproval successful";
+        return { success: true, message, genre };
+    }
+
+    // FETCH REQUESTED GENRES WITH SEARCH (PAGINATED)
     static async fetchRequestGenre(page: number = 1, limit: number = 10, search?: string) {
         const query: any = { isApproved: false };
 
@@ -95,21 +124,7 @@ export class GenreService {
         };
     }
 
-    // TOGGLE APPROVE
-    static async toggleApprove(id: string) {
-        const genre = await Genre.findById(id);
-        if (!genre) {
-            throw new AppError("Genre not found", 404);
-        }
-
-        genre.isApproved = !genre.isApproved;
-        await genre.save();
-
-        const message = genre.isApproved ? "Genre approved" : "Genre disapproval successful";
-        return { success: true, message, genre };
-    }
-
-    // UPDATED: FETCH APPROVED GENRES WITH SEARCH (PAGINATED)
+    // FETCH APPROVED GENRES WITH SEARCH (PAGINATED)
     static async fetchAllGenre(page: number = 1, limit: number = 10, search?: string) {
         const query: any = { isApproved: true };
 
@@ -146,12 +161,41 @@ export class GenreService {
             throw new AppError("At least one genre is required", 400);
         }
 
-        const existingGenre = await Genre.find({ _id: { $in: ids } });
+        // Filter and remove any invalid format IDs instantly
+        const cleanIds = ids.filter(id => mongoose.Types.ObjectId.isValid(id.toString()));
+        if (cleanIds.length !== ids.length) {
+            throw new AppError("One or more provided genres contain structural format errors", 400);
+        }
 
-        if (existingGenre.length !== ids.length) {
+        const existingGenre = await Genre.find({ _id: { $in: cleanIds } });
+
+        if (existingGenre.length !== cleanIds.length) {
             throw new AppError("One or more provided genres are invalid", 400);
         }
 
         return existingGenre.map(genre => genre._id as Types.ObjectId);
+    }
+
+
+    //FETCH EVERY GENRE
+    static async fetchEveryGenre(page: number = 1, limit: number = 10, search?: string) {
+        const query: any = {}; // Empty object matches all records regardless of isApproved status
+
+        if (search) {
+            const searchRegex = new RegExp(search.trim(), "i");
+            query.$or = [
+                { name: searchRegex },
+                { desc: searchRegex }
+            ];
+        }
+
+        const result = await paginate<IGenre>(Genre, query, { page, limit });
+
+        return {
+            success: true,
+            message: result.data.length ? "All system genres fetched successfully" : "No genres found in system database",
+            meta: result.meta,
+            genres: result.data
+        };
     }
 }

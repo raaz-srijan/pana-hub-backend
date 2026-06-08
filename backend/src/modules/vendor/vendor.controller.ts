@@ -77,4 +77,11 @@ export class VendorController {
         const result = await VendorService.deleteVendor(id);
         return res.status(200).json(result);
     });
+
+
+    //FETCH ALL
+    static fetchAllVendors = catchAsync(async(req:Request, res:Response) => {
+        const result = await VendorService.fetchAllVendors();
+        return res.status(200).json(result);
+    })
 }
