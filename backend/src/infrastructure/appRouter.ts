@@ -14,6 +14,7 @@ import bookRouter from "../modules/book/book.route.js";
 import orderRouter from "../modules/order/order.route.js";
 import paymentRouter from "../modules/payment/payment.route.js";
 import wishlistRouter from "../modules/wishlist/wishlist.route.js";
+import analyticsRouter from "../modules/analytics/analytics.route.js";
 
 const appRouter = Router();
 
@@ -32,5 +33,6 @@ appRouter.use("/books", bookRouter);
 appRouter.use("/orders", orderRouter);
 appRouter.use("/payment", paymentRouter);
 appRouter.use("/wishlist", wishlistRouter);
+appRouter.use("/analytics", analyticsRouter);
 
 export default appRouter;
