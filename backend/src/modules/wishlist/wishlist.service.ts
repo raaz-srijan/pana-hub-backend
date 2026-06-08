@@ -4,7 +4,7 @@ import { Wishlist } from "./wishlist.model";
 
 export class WishlistService {
 
-    //ADD TO WISHLIST
+    // ADD TO WISHLIST
     static async addToWishlist(userId: string, bookId: string) {
         const user = await UserService.getUserId(userId);
 
@@ -21,6 +21,17 @@ export class WishlistService {
             { new: true, upsert: true }
         );
 
+        if (updatedWishlist) {
+            await updatedWishlist.populate({
+                path: "books.bookId",
+                model: "Book",
+                populate: [
+                    { path: "author", model: "Author", select: "name" },
+                    { path: "category", model: "Category", select: "name" }
+                ]
+            });
+        }
+
         return {
             success: true,
             message: "Book added to wishlist successfully",
@@ -28,7 +39,8 @@ export class WishlistService {
         };
     }
 
-    //REMOVE FROM WISHLIST
+
+    // REMOVE FROM WISHLIST
     static async removeFromWishlist(userId: string, bookId: string) {
         const user = await UserService.getUserId(userId);
 
@@ -45,14 +57,26 @@ export class WishlistService {
             { new: true }
         );
 
+        if (updatedWishlist) {
+            await updatedWishlist.populate({
+                path: "books.bookId",
+                model: "Book",
+                populate: [
+                    { path: "author", model: "Author", select: "name" },
+                    { path: "category", model: "Category", select: "name" }
+                ]
+            });
+        }
+
         return {
             success: true,
             message: "Book removed from wishlist successfully",
-            data: updatedWishlist
+            data: updatedWishlist || { userId: user._id, books: [] }
         };
     }
 
-    //CLEAR THE ENTIRE WISHLIST
+
+    // CLEAR THE ENTIRE WISHLIST
     static async clearWishlist(userId: string) {
         const user = await UserService.getUserId(userId);
 
@@ -66,15 +90,26 @@ export class WishlistService {
             { new: true }
         );
 
+        if (updatedWishlist) {
+            await updatedWishlist.populate({
+                path: "books.bookId",
+                model: "Book",
+                populate: [
+                    { path: "author", model: "Author", select: "name" },
+                    { path: "category", model: "Category", select: "name" }
+                ]
+            });
+        }
+
         return {
             success: true,
             message: "Wishlist cleared completely",
-            data: updatedWishlist
+            data: updatedWishlist || { userId: user._id, books: [] }
         };
     }
 
 
-    //FETCH WISHLIST (With Document Population)
+    // FETCH WISHLIST (With Deep Document Population)
     static async fetchWishlist(userId: string) {
         const user = await UserService.getUserId(userId);
 
@@ -85,7 +120,19 @@ export class WishlistService {
         const wishlist = await Wishlist.findOne({ userId: user._id })
             .populate({
                 path: "books.bookId",
-                model: "Book"
+                model: "Book",
+                populate: [
+                    {
+                        path: "author",
+                        model: "Author",
+                        select: "name"
+                    },
+                    {
+                        path: "category",
+                        model: "Category",
+                        select: "name"
+                    }
+                ]
             });
 
         return {

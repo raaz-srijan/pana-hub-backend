@@ -55,29 +55,41 @@ export class AuthService {
     
     //REFRESH
     static async refresh(token: string) {
-        const decoded = verifyRefreshToken(token);
+    if (!token) throw new AppError("Refresh token missing", 401);
+    
+    const decoded = verifyRefreshToken(token);
 
-        const user = await UserService.getUserId(decoded.id);
-        if (!user) {
-            throw new AppError("User not found", 404);
-        }
-
-        const roleName = (user.roleId as any)?.name;
-
-        const newAccessToken = generateAccessToken({
-            id: user._id.toString(),
-            role: roleName,
-            email: user.email
-        });
-
-        const newRefreshToken = generateRefreshToken({
-            id: user._id.toString(),
-            role: roleName
-        });
+    const user = await UserService.getUserId(decoded.id);
+    if (!user) {
+        throw new AppError("User not found", 404);
     }
 
+    const roleName = (user.roleId as any)?.name;
 
-    //VERIFY-EMAIL-WITH-TOKEN
+    const newAccessToken = generateAccessToken({
+        id: user._id.toString(),
+        role: roleName,
+        email: user.email
+    });
+
+    const newRefreshToken = generateRefreshToken({
+        id: user._id.toString(),
+        role: roleName
+    });
+
+    return {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+        user: {
+            id: user._id,
+            email: user.email,
+            role: roleName
+        }
+    };
+}
+
+
+//VERIFY-EMAIL-WITH-TOKEN
     static async verifyToken(accessToken: string) {
 
         const decoded = await verifyAccessToken(accessToken);

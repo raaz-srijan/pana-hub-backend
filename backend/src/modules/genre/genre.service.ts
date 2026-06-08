@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import { AppError } from "../../shared/error/appError";
 import { Genre, IGenre } from "./genre.model";
+import { paginate } from "../../shared/helper/pagination";
 
 class GenrePayload {
     public readonly name: string;
@@ -72,16 +73,25 @@ export class GenreService {
         return { success: true, message: "Genre deleted successfully" };
     }
 
-    // FETCH REQUESTED GENRES
-    static async fetchRequestGenre(page: number = 1, limit: number = 10) {
-        const genres = await Genre.find({ isApproved: false })
-            .skip((page - 1) * limit)
-            .limit(limit);
+    // UPDATED: FETCH REQUESTED GENRES WITH SEARCH (PAGINATED)
+    static async fetchRequestGenre(page: number = 1, limit: number = 10, search?: string) {
+        const query: any = { isApproved: false };
+
+        if (search) {
+            const searchRegex = new RegExp(search.trim(), "i");
+            query.$or = [
+                { name: searchRegex },
+                { desc: searchRegex }
+            ];
+        }
+
+        const result = await paginate<IGenre>(Genre, query, { page, limit });
 
         return {
             success: true,
-            message: genres.length ? "Genres fetched successfully" : "No genres found",
-            genres
+            message: result.data.length ? "Genres fetched successfully" : "No genres found",
+            meta: result.meta,
+            genres: result.data
         };
     }
 
@@ -99,33 +109,28 @@ export class GenreService {
         return { success: true, message, genre };
     }
 
-    // FETCH APPROVED GENRES
-    static async fetchAllGenre(page: number = 1, limit: number = 10) {
-        const genres = await Genre.find({ isApproved: true })
-            .skip((page - 1) * limit)
-            .limit(limit);
+    // UPDATED: FETCH APPROVED GENRES WITH SEARCH (PAGINATED)
+    static async fetchAllGenre(page: number = 1, limit: number = 10, search?: string) {
+        const query: any = { isApproved: true };
+
+        if (search) {
+            const searchRegex = new RegExp(search.trim(), "i");
+            query.$or = [
+                { name: searchRegex },
+                { desc: searchRegex }
+            ];
+        }
+
+        const result = await paginate<IGenre>(Genre, query, { page, limit });
 
         return {
             success: true,
-            message: genres.length ? "Genres fetched successfully" : "No genres found",
-            genres
+            message: result.data.length ? "Genres fetched successfully" : "No genres found",
+            meta: result.meta,
+            genres: result.data
         };
     }
 
-    // FETCH EVERY SINGLE GENRE (Approved & Unapproved)
-    static async fetchEveryGenre(page: number = 1, limit: number = 10) {
-        const safePage = Math.max(1, page);
-        const safeLimit = Math.max(1, limit);
-        const skip = (safePage - 1) * safeLimit;
-
-        const genres = await Genre.find({}).skip(skip).limit(safeLimit);
-
-        return {
-            success: true,
-            message: genres.length ? "All genres fetched successfully" : "No genres found",
-            genres
-        };
-    }
     // GET GENRE BY NAME
     static async getGenreName(name: string) {
         const genre = await Genre.findOne({ name: name.trim().toLowerCase() });
@@ -135,7 +140,7 @@ export class GenreService {
         return genre;
     }
 
-    //VALIDATE GENRE
+    // VALIDATE GENRE
     static async validateGenre(ids: Types.ObjectId[]) {
         if (!ids || ids.length === 0) {
             throw new AppError("At least one genre is required", 400);
@@ -148,6 +153,5 @@ export class GenreService {
         }
 
         return existingGenre.map(genre => genre._id as Types.ObjectId);
-
     }
 }
