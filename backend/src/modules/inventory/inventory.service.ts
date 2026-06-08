@@ -3,6 +3,7 @@ import { VendorService } from "../vendor/vendor.service";
 import { IInventory, Inventory } from "./inventory.model";
 import { AppError } from "../../shared/error/appError";
 import { BookService } from "../book/book.service";
+import { UserService } from "../user/user.service";
 
 class InventoryPayload {
     public readonly bookName?: string;
@@ -119,108 +120,83 @@ export class InventoryService {
         return { success: true, message: "Item deactivated and removed from store view successfully" };
     };
 
-    
-    //ITEM FILTER
-   private static async itemFilter(
-        vendorId: string, 
-        filter: Record<string, any> = {}, 
-        searchQuery?: string
-    ) {
-        const pipeline: any[] = [
-            { $match: { vendorId: new mongoose.Types.ObjectId(vendorId), ...filter } }
-        ];
 
-        pipeline.push(
-            {
-                $lookup: {
-                    from: "books",
-                    localField: "bookId",
-                    foreignField: "_id",
-                    as: "bookId"
-                }
-            },
-            { $unwind: "$bookId" }
-        );
+    // FETCH FOR FILTER
+    private static async itemFilter(vendorId: string, filter: Record<string, any> = {}) {
+        const query = { vendorId, ...filter };
 
-        pipeline.push(
-            {
-                $lookup: {
-                    from: "authors",
-                    localField: "bookId.author",
-                    foreignField: "_id",
-                    as: "bookId.author"
-                }
-            },
-            { $unwind: { path: "$bookId.author", preserveNullAndEmptyArrays: true } },
-            {
-                $lookup: {
-                    from: "categories",
-                    localField: "bookId.category",
-                    foreignField: "_id",
-                    as: "bookId.category"
-                }
-            },
-            { $unwind: { path: "$bookId.category", preserveNullAndEmptyArrays: true } }
-        );
-
-        if (searchQuery && searchQuery.trim() !== "") {
-            const regex = new RegExp(searchQuery.trim(), "i");
-            pipeline.push({
-                $match: {
-                    $or: [
-                        { "bookId.name": regex },
-                        { "bookId.isbn": regex },
-                        { "bookId.author.name": regex },
-                        { "bookId.category.name": regex }
+        const items = await Inventory.find(query)
+            .populate([
+                {
+                    path: "bookId",
+                    select: "name isbn coverImage author category",
+                    populate: [
+                        { path: "author", select: "name" },
+                        { path: "category", select: "name" }
                     ]
                 }
-            });
-        }
+            ])
+            .sort({ createdAt: -1 });
 
-        pipeline.push({ $sort: { createdAt: -1 } });
-
-        const items = await Inventory.aggregate(pipeline);
-
-        return {
-            success: true,
-            message: items.length ? "Items fetched successfully" : "No items available",
-            data: items
-        };
+        return { success: true, message: items.length ? "Items fetched successfully" : "No items available", data: items };
     }
 
 
-    // FETCH INACTIVE ITEMS WITH SEARCH
-    static async fetchInactive(vendorId: string, search?: string) {
+    // FETCH INACTIVE ITEMS
+    static async fetchInactive(vendorId: string) {
         await VendorService.fetchVendorByID(vendorId);
-        return await this.itemFilter(vendorId, { isActive: false }, search);
+        return await this.itemFilter(vendorId, { isActive: false });
     }
 
 
-    // FETCH ACTIVE ITEMS WITH SEARCH
-    static async fetchActive(vendorId: string, search?: string) {
+    // FETCH ACTIVE ITEMS
+    static async fetchActive(vendorId: string) {
         await VendorService.fetchVendorByID(vendorId);
-        return await this.itemFilter(vendorId, { isActive: true }, search);
+        return await this.itemFilter(vendorId, { isActive: true });
     }
 
 
-    // FETCH ALL ITEMS WITH SEARCH
-    static async fetchAll(vendorId: string, search?: string) {
+    // FETCH ALL ITEMS
+    static async fetchAll(vendorId: string) {
         await VendorService.fetchVendorByID(vendorId);
-        return await this.itemFilter(vendorId, {}, search);
+        return await this.itemFilter(vendorId, {});
     }
 
 
-    // FETCH PUBLIC STOREFRONT WITH SEARCH
-    static async fetchPublicStorefront(vendorId: string, search?: string) {
+    // FETCH PUBLIC STOREFRONT
+    static async fetchPublicStorefront(vendorId: string) {
         const vendor = await VendorService.fetchVendorByID(vendorId);
         if (!vendor.isVerified) {
             throw new AppError("Storefront is currently unavailable", 404);
         }
 
-        return await this.itemFilter(
-            vendorId, 
-            { isActive: true, stock: { $gt: 0 } }, 
-            search
-        );
+        //Fetch only active items with stock greater than 0
+        const items = await Inventory.find({
+            vendorId: vendor._id,
+            isActive: true,
+            stock: { $gt: 0 }
+        })
+            .populate([
+                {
+                    path: "bookId",
+                    select: "name isbn coverImage author category",
+                    populate: [
+                        { path: "author", select: "name" },
+                        { path: "category", select: "name" }
+                    ]
+                }
+            ])
+            .select("-stockReminder -createdAt -updatedAt")
+            .sort({ createdAt: -1 });
+
+        return {
+            success: true, message: "Storefront items retrieved successfully", storeName: vendor.vendorName, address: vendor.address, data: items
+        };
+    }
+
+    // FETCH OWN INVENTORY (Fixed: Corrected return types and mapped queries cleanly)
+    static async fetchOwnInventory(vendorId: string) {
+        await VendorService.fetchVendorByID(vendorId);
+        return await InventoryService.itemFilter(vendorId);
     }
 }

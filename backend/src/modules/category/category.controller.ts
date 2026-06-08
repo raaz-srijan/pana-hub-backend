@@ -7,52 +7,54 @@ export class CategoryController {
     // REQUEST / ADD CATEGORY
     static addCat = catchAsync(async (req: Request, res: Response) => {
         const result = await CategoryService.requestCat(req.body);
-        return res.status(201).json(result);
+        res.status(201).json(result);
     });
-
 
     // UPDATE CATEGORY
     static updateCat = catchAsync(async (req: Request, res: Response) => {
         const { id } = req.params;
         const result = await CategoryService.updateCat(id, req.body);
-        return res.status(200).json(result);
+        res.status(200).json(result);
     });
-
 
     // DELETE CATEGORY
     static deleteCat = catchAsync(async (req: Request, res: Response) => {
         const { id } = req.params;
         const result = await CategoryService.deleteCat(id);
-        return res.status(200).json(result);
+        res.status(200).json(result);
     });
 
-
-    // FETCH REQUESTED CATEGORIES (PAGINATED & SEARCHABLE)
+    // FETCH REQUESTED CATEGORIES (PAGINATED)
     static fetchRequestCat = catchAsync(async (req: Request, res: Response) => {
         const page = parseInt(req.query.page as string, 10) || 1;
         const limit = parseInt(req.query.limit as string, 10) || 10;
-        const search = req.query.search as string | undefined;
 
-        const result = await CategoryService.fetchRequestCat(page, limit, search);
-        return res.status(200).json(result);
+        const result = await CategoryService.fetchRequestCat(page, limit);
+        res.status(200).json(result);
     });
-
 
     // TOGGLE APPROVAL
     static toggleApprove = catchAsync(async (req: Request, res: Response) => {
         const { id } = req.params;
         const result = await CategoryService.toggleApprove(id);
-        return res.status(200).json(result);
+        res.status(200).json(result);
     });
 
-
-    // FETCH APPROVED CATEGORIES (PAGINATED & SEARCHABLE)
+    // FETCH APPROVED CATEGORIES (PAGINATED)
     static fetchAllCat = catchAsync(async (req: Request, res: Response) => {
         const page = parseInt(req.query.page as string, 10) || 1;
         const limit = parseInt(req.query.limit as string, 10) || 10;
-        const search = req.query.search as string | undefined;
 
-        const result = await CategoryService.fetchAllCat(page, limit, search);
+        const result = await CategoryService.fetchAllCat(page, limit);
+        res.status(200).json(result);
+    });
+
+    // FETCH EVERY SINGLE CATEGORY (APPROVED & UNAPPROVED)
+    static fetchEveryCat = catchAsync(async (req: Request, res: Response) => {
+        const page = parseInt(req.query.page as string, 10) || 1;
+        const limit = parseInt(req.query.limit as string, 10) || 10;
+
+        const result = await CategoryService.fetchEveryCat(page, limit);
         return res.status(200).json(result);
     });
 
@@ -60,6 +62,6 @@ export class CategoryController {
     static getCatName = catchAsync(async (req: Request, res: Response) => {
         const { name } = req.params;
         const result = await CategoryService.getCatName(name);
-        return res.status(200).json(result);
+        res.status(200).json(result);
     });
 }

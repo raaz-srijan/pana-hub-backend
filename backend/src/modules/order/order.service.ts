@@ -3,7 +3,6 @@ import { Order, IOrder } from "./order.model";
 import { Inventory } from "../inventory/inventory.model";
 import { Cart } from "../cart/cart.model";
 import { AppError } from "../../shared/error/appError";
-import { paginate } from "../../shared/helper/pagination";
 
 export class OrderService {
 
@@ -19,7 +18,7 @@ export class OrderService {
         };
     }
 
-    // PLACE ORDER FROM CART (Customer)
+    //PLACE ORDER FROM CART (Customer)
     static async createOrderFromCart(
         userId: string,
         shippingAddress: any,
@@ -117,7 +116,8 @@ export class OrderService {
         };
     }
 
-    // PLACE DIRECT ORDER (Customer)
+
+    //PLACE DIRECT ORDER (Customer)
     static async createDirectOrder(
         userId: string,
         items: { inventoryId: string; quantity: number }[],
@@ -218,38 +218,51 @@ export class OrderService {
         };
     }
 
-    // REFACTORED: FETCH OWN ORDERS (Customer)
+
+    //FETCH OWN ORDERS (Customer)
     static async fetchOwnOrders(userId: string, page: number = 1, limit: number = 10) {
-        const result = await paginate<IOrder>(
-            Order, 
-            { userId }, 
-            { 
-                page, 
-                limit,
-                sort: { createdAt: -1 },
-                populate: [
-                    {
-                        path: "books.bookId",
-                        select: "name isbn coverImage author",
-                        populate: { path: "author", select: "name" }
-                    },
-                    {
-                        path: "books.vendorId",
-                        select: "vendorName"
-                    }
-                ]
-            }
-        );
+        const sanitizedPage = Math.max(1, parseInt(page as any) || 1);
+        const sanitizedLimit = Math.max(1, parseInt(limit as any) || 10);
+        const skip = (sanitizedPage - 1) * sanitizedLimit;
+
+        const filter = { userId };
+
+        const [totalOrders, orders] = await Promise.all([
+            Order.countDocuments(filter),
+            Order.find(filter)
+                .populate({
+                    path: "books.bookId",
+                    select: "name isbn coverImage author",
+                    populate: { path: "author", select: "name" }
+                })
+                .populate({
+                    path: "books.vendorId",
+                    select: "vendorName"
+                })
+                .skip(skip)
+                .limit(sanitizedLimit)
+                .sort({ createdAt: -1 })
+        ]);
+
+        const totalPages = Math.ceil(totalOrders / sanitizedLimit);
 
         return {
             success: true,
-            message: result.data.length ? "Orders fetched successfully." : "No orders found.",
-            meta: result.meta,
-            orders: result.data
+            message: orders.length ? "Orders fetched successfully." : "No orders found.",
+            pagination: {
+                totalItems: totalOrders,
+                totalPages,
+                currentPage: sanitizedPage,
+                limit: sanitizedLimit,
+                hasNextPage: sanitizedPage < totalPages,
+                hasPrevPage: sanitizedPage > 1
+            },
+            orders
         };
     }
 
-    // FETCH OWN ORDER BY ID (Customer)
+
+    //FETCH OWN ORDER BY ID (Customer)
     static async fetchOwnOrderById(userId: string, orderId: string) {
         if (!orderId || !Types.ObjectId.isValid(orderId)) {
             throw new AppError("Invalid or missing order ID.", 400);
@@ -280,7 +293,8 @@ export class OrderService {
         };
     }
 
-    // CANCEL OWN ORDER (Customer)
+
+    //CANCEL OWN ORDER (Customer)
     static async cancelOwnOrder(userId: string, orderId: string) {
         if (!orderId || !Types.ObjectId.isValid(orderId)) {
             throw new AppError("Invalid or missing order ID.", 400);
@@ -312,28 +326,30 @@ export class OrderService {
         };
     }
 
-    // REFACTORED: FETCH VENDOR ORDERS (Vendor)
+    //FETCH VENDOR ORDERS (Vendor)
     static async fetchVendorOrders(vendorId: string, page: number = 1, limit: number = 10) {
-        const result = await paginate<IOrder>(
-            Order,
-            { "books.vendorId": vendorId },
-            {
-                page,
-                limit,
-                sort: { createdAt: -1 },
-                populate: [
-                    { path: "userId", select: "name email" },
-                    {
-                        path: "books.bookId",
-                        select: "name isbn coverImage author",
-                        populate: { path: "author", select: "name" }
-                    }
-                ]
-            }
-        );
+        const sanitizedPage = Math.max(1, parseInt(page as any) || 1);
+        const sanitizedLimit = Math.max(1, parseInt(limit as any) || 10);
+        const skip = (sanitizedPage - 1) * sanitizedLimit;
+
+        const filter = { "books.vendorId": vendorId };
+
+        const [totalOrders, orders] = await Promise.all([
+            Order.countDocuments(filter),
+            Order.find(filter)
+                .populate("userId", "name email")
+                .populate({
+                    path: "books.bookId",
+                    select: "name isbn coverImage author",
+                    populate: { path: "author", select: "name" }
+                })
+                .skip(skip)
+                .limit(sanitizedLimit)
+                .sort({ createdAt: -1 })
+        ]);
 
         // Filter response to only include items belonging to this vendor for privacy
-        const formattedOrders = result.data.map((order) => {
+        const formattedOrders = orders.map((order) => {
             const vendorItems = order.books.filter((b) => b.vendorId.toString() === vendorId.toString());
             const vendorSubTotal = vendorItems.reduce((acc, curr) => acc + curr.subTotal, 0);
 
@@ -353,56 +369,74 @@ export class OrderService {
             };
         });
 
+        const totalPages = Math.ceil(totalOrders / sanitizedLimit);
+
         return {
             success: true,
             message: formattedOrders.length ? "Vendor orders fetched successfully." : "No orders found for your storefront.",
-            meta: result.meta,
+            pagination: {
+                totalItems: totalOrders,
+                totalPages,
+                currentPage: sanitizedPage,
+                limit: sanitizedLimit,
+                hasNextPage: sanitizedPage < totalPages,
+                hasPrevPage: sanitizedPage > 1
+            },
             orders: formattedOrders
         };
     }
 
-    // REFACTORED: FETCH ALL ORDERS (Admin)
+    //FETCH ALL ORDERS (Admin)
     static async fetchAdminOrders(
         page: number = 1,
         limit: number = 10,
         orderStatus?: string,
         paymentStatus?: string
     ) {
+        const sanitizedPage = Math.max(1, parseInt(page as any) || 1);
+        const sanitizedLimit = Math.max(1, parseInt(limit as any) || 10);
+        const skip = (sanitizedPage - 1) * sanitizedLimit;
+
         const filter: any = {};
         if (orderStatus) filter.orderStatus = orderStatus;
         if (paymentStatus) filter.paymentStatus = paymentStatus;
 
-        const result = await paginate<IOrder>(
-            Order,
-            filter,
-            {
-                page,
-                limit,
-                sort: { createdAt: -1 },
-                populate: [
-                    { path: "userId", select: "name email" },
-                    {
-                        path: "books.bookId",
-                        select: "name isbn coverImage author",
-                        populate: { path: "author", select: "name" }
-                    },
-                    {
-                        path: "books.vendorId",
-                        select: "vendorName"
-                    }
-                ]
-            }
-        );
+        const [totalOrders, orders] = await Promise.all([
+            Order.countDocuments(filter),
+            Order.find(filter)
+                .populate("userId", "name email")
+                .populate({
+                    path: "books.bookId",
+                    select: "name isbn coverImage author",
+                    populate: { path: "author", select: "name" }
+                })
+                .populate({
+                    path: "books.vendorId",
+                    select: "vendorName"
+                })
+                .skip(skip)
+                .limit(sanitizedLimit)
+                .sort({ createdAt: -1 })
+        ]);
+
+        const totalPages = Math.ceil(totalOrders / sanitizedLimit);
 
         return {
             success: true,
-            message: result.data.length ? "Admin orders fetched successfully." : "No orders found.",
-            meta: result.meta,
-            orders: result.data
+            message: orders.length ? "Admin orders fetched successfully." : "No orders found.",
+            pagination: {
+                totalItems: totalOrders,
+                totalPages,
+                currentPage: sanitizedPage,
+                limit: sanitizedLimit,
+                hasNextPage: sanitizedPage < totalPages,
+                hasPrevPage: sanitizedPage > 1
+            },
+            orders
         };
     }
 
-    // FETCH ADMIN ORDER BY ID (Admin)
+    //FETCH ADMIN ORDER BY ID (Admin)
     static async fetchAdminOrderById(orderId: string) {
         if (!orderId || !Types.ObjectId.isValid(orderId)) {
             throw new AppError("Invalid or missing order ID.", 400);
@@ -434,7 +468,7 @@ export class OrderService {
         };
     }
 
-    // UPDATE ORDER STATUS (Admin)
+    //UPDATE ORDER STATUS (Admin)
     static async updateOrderStatus(orderId: string, orderStatus: IOrder["orderStatus"]) {
         if (!orderId || !Types.ObjectId.isValid(orderId)) {
             throw new AppError("Invalid or missing order ID.", 400);
@@ -504,7 +538,7 @@ export class OrderService {
         };
     }
 
-    // UPDATE PAYMENT STATUS (Admin)
+    //UPDATE PAYMENT STATUS (Admin)
     static async updatePaymentStatus(orderId: string, paymentStatus: IOrder["paymentStatus"]) {
         if (!orderId || !Types.ObjectId.isValid(orderId)) {
             throw new AppError("Invalid or missing order ID.", 400);

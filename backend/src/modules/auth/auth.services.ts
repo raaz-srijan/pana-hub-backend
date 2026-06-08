@@ -89,7 +89,7 @@ export class AuthService {
 }
 
 
-    //VERIFY-EMAIL-WITH-TOKEN
+//VERIFY-EMAIL-WITH-TOKEN
     static async verifyToken(accessToken: string) {
 
         const decoded = await verifyAccessToken(accessToken);

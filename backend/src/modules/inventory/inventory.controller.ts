@@ -46,46 +46,55 @@ export class InventoryController {
     });
 
 
-   // FETCH ACTIVE ITEMS (?search=...)
+    // FETCH ACTIVE ITEMS
     static fetchActive = catchAsync(async (req: Request, res: Response) => {
         const vendorId = InventoryController.getVendorIdOrThrow(req);
-        const search = req.query.search as string | undefined;
 
-        const result = await InventoryService.fetchActive(vendorId, search);
+        const result = await InventoryService.fetchActive(vendorId);
+
         res.status(200).json(result);
     });
 
-    
-    // FETCH INACTIVE ITEMS (?search=...)
+
+    // FETCH INACTIVE ITEMS
     static fetchInactive = catchAsync(async (req: Request, res: Response) => {
         const vendorId = InventoryController.getVendorIdOrThrow(req);
-        const search = req.query.search as string | undefined;
 
-        const result = await InventoryService.fetchInactive(vendorId, search);
+        const result = await InventoryService.fetchInactive(vendorId);
+
         res.status(200).json(result);
     });
 
 
-    // FETCH ALL ITEMS (search)
+    // FETCH ALL ITEMS
     static fetchAll = catchAsync(async (req: Request, res: Response) => {
         const vendorId = InventoryController.getVendorIdOrThrow(req);
-        const search = req.query.search as string | undefined;
 
-        const result = await InventoryService.fetchAll(vendorId, search);
+        const result = await InventoryService.fetchAll(vendorId);
+
         res.status(200).json(result);
     });
 
 
-    // FETCH PUBLIC STOREFRONT ITEMS (?search=...)
+    // FETCH PUBLIC STOREFRONT ITEMS
     static fetchPublicStorefront = catchAsync(async (req: Request, res: Response) => {
         const { vendorId } = req.params;
-        const search = req.query.search as string | undefined;
 
         if (!vendorId) {
             throw new AppError("Vendor ID parameter is required", 400);
         }
 
-        const result = await InventoryService.fetchPublicStorefront(vendorId, search);
+        const result = await InventoryService.fetchPublicStorefront(vendorId);
+
         res.status(200).json(result);
+    });
+
+
+    static getOwnInventory = catchAsync(async (req: Request, res: Response) => {
+        if(!req.vendorId)
+            throw new AppError("Please login", 401);
+        const vendor = req.vendorId;
+        const result = await InventoryService.fetchOwnInventory(vendor.toString());
+        return res.status(200).json(result);
     });
 }

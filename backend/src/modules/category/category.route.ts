@@ -5,17 +5,21 @@ import { auth } from "../../shared/middleware/auth";
 
 const router = Router();
 
-//PUBLIC ROUTES
 router.get("/approved", CategoryController.fetchAllCat);
 router.get("/name/:name", CategoryController.getCatName);
 
-//VENDOR & ADMIN ROUTES
-router.post("/request", auth, restrictTo("vendor", "admin"), CategoryController.addCat);
-router.put("/:id", auth, restrictTo("vendor", "admin"), CategoryController.updateCat);
 
-//ADMIN ONLY ROUTES
-router.get("/requested", auth, restrictTo("admin"), CategoryController.fetchRequestCat);
-router.patch("/:id/toggle-approve", auth, restrictTo("admin"), CategoryController.toggleApprove);
-router.delete("/:id", auth, restrictTo("admin"), CategoryController.deleteCat);
+router.use(auth); 
+
+router.get("/all", restrictTo("admin", "vendor"), CategoryController.fetchEveryCat);
+
+router.get("/requested", restrictTo("admin"), CategoryController.fetchRequestCat);
+
+router.post("/request", restrictTo("vendor", "admin"), CategoryController.addCat);
+
+
+router.put("/:id", restrictTo("vendor", "admin"), CategoryController.updateCat);
+router.patch("/:id/toggle-approve", restrictTo("admin"), CategoryController.toggleApprove);
+router.delete("/:id", restrictTo("admin"), CategoryController.deleteCat);
 
 export default router;

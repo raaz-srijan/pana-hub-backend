@@ -8,8 +8,13 @@ import roleRoute from "../modules/role/role.route.js";
 import categoryRoute from "../modules/category/category.route.js";
 import genreRoute from "../modules/genre/genre.route.js";
 import authorRoute from "../modules/author/author.route.js";
+<<<<<<< HEAD
+import bookRouter from "../modules/book/book.route.js";
+import inventoryRoute from "../modules/inventory/inventory.route.js";
+=======
 import cartRoute from "../modules/cart/cart.route.js";
 import bookRouter from "../modules/book/book.route.js";
+>>>>>>> d2f16803441089d0f9cb6ca8822d8c1985f2ee31
 import orderRouter from "../modules/order/order.route.js";
 import paymentRouter from "../modules/payment/payment.route.js";
 import wishlistRouter from "../modules/wishlist/wishlist.route.js";
@@ -23,8 +28,13 @@ appRouter.use("/permissions", permissionRoute);
 appRouter.use("/roles", roleRoute);
 appRouter.use("/categories", categoryRoute);
 appRouter.use("/genres", genreRoute);
+<<<<<<< HEAD
+appRouter.use("/authors", authorRoute);
+appRouter.use("/inventory", inventoryRoute);
+=======
 appRouter.use("/cart", cartRoute);
 appRouter.use("/authors", authorRoute);
+>>>>>>> d2f16803441089d0f9cb6ca8822d8c1985f2ee31
 appRouter.use("/books", bookRouter);
 appRouter.use("/orders", orderRouter);
 appRouter.use("/payment", paymentRouter);
