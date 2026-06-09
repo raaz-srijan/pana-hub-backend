@@ -40,7 +40,7 @@ function App() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-text-muted">
         <FiLoader className="text-3xl animate-spin text-primary mb-3" />
-        <p className="text-xs font-semibold tracking-wider uppercase">Re-hydrating secure session channels...</p>
+        <p className="text-xs font-semibold tracking-wider uppercase">Loading...</p>
       </div>
     );
   }

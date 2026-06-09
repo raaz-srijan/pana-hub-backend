@@ -3,5 +3,4 @@
 **/uploads/
 .vscode/
 .devcontainer/
-frontend/
 public-frontend/
