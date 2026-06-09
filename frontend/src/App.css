@@ -1,0 +1,48 @@
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  /* Layout Backgrounds */
+  --color-background: #F1F5F9;   /* Slightly deeper gray (slate-100) to make white data cards pop */
+  --color-sidebar: #0F172A;      /* Kept your customer UI-dark here for brand continuity and an authoritative sidebar */
+  --color-card-bg: #FFFFFF;      /* Clean canvas for charts, tables, and lists */
+
+  /* Typography & Hierarchy */
+  --color-text-main: #1E293B;    /* High-contrast slate for dense data grid readability */
+  --color-text-muted: #64748B;   /* For secondary details, table headers, and timestamps */
+  
+  /* Brand/Action Colors */
+  --color-primary: #4F46E5;      /* Indigo-600: Instantly signals an administrative/actionable environment */
+  --color-primary-hover: #4338CA; 
+
+  /* Semantic Status Colors (Crucial for inventory, sales, and order approvals) */
+  --color-success: #10B981;      /* Emerald: Completed payouts, in-stock books */
+  --color-warning: #F59E0B;      /* Amber: Pending low stock, awaiting approval */
+  --color-danger: #EF4444;       /* Red: Cancelled orders, out of stock */
+
+  /* Typography */
+  --font-serif: 'Merriweather', serif;
+  --font-sans: 'Inter', sans-serif;
+}
+
+/* Dashboard Specific Container (Fluid layout for dense data, unlike the constrained customer view) */
+.dashboard-container {
+  @apply w-full px-6 py-8 font-sans text-text-main;
+}
+
+/* Custom Scrollbars optimized for tight data tables and sidebars */
+.scrollbar-dashboard::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.scrollbar-dashboard::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-dashboard::-webkit-scrollbar-thumb {
+  background-color: #CBD5E1; /* slate-300 */
+  border-radius: 10px;
+}
+.scrollbar-dashboard:hover::-webkit-scrollbar-thumb {
+  background-color: #94A3B8; /* slate-400 */
+}
